@@ -76,7 +76,9 @@ public final class DrawManager {
 		/** Bonus ship. */
 		EnemyShipSpecial,
 		/** Destroyed enemy ship. */
-		Explosion
+		Explosion,
+		/** Achievement trophy icon. */
+		Trophy
 	};
 
 	/**
@@ -102,6 +104,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.EnemyShipC2, new boolean[12][8]);
 			spriteMap.put(SpriteType.EnemyShipSpecial, new boolean[16][7]);
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
+			spriteMap.put(SpriteType.Trophy, new boolean[11][8]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
@@ -201,6 +204,56 @@ public final class DrawManager {
 							+ j * 2, 1, 1);
 	}
 
+	/**
+	 * Draws a sprite directly, without needing an Entity.
+	 *
+	 * @param type      Sprite to draw.
+	 * @param positionX Horizontal position of the left edge.
+	 * @param positionY Vertical position of the top edge.
+	 * @param color     Colour of the sprite.
+	 */
+	public void drawSprite(final SpriteType type, final int positionX,
+			final int positionY, final Color color) {
+		boolean[][] image = spriteMap.get(type);
+
+		backBufferGraphics.setColor(color);
+		for (int i = 0; i < image.length; i++)
+			for (int j = 0; j < image[i].length; j++)
+				if (image[i][j])
+					backBufferGraphics.drawRect(positionX + i * 2,
+							positionY + j * 2, 1, 1);
+	}
+
+	/**
+	 * Draws regular text at an exact position, left aligned.
+	 *
+	 * @param string    Text to draw.
+	 * @param positionX Horizontal position of the left edge.
+	 * @param positionY Vertical position of the baseline.
+	 * @param color     Colour of the text.
+	 */
+	public void drawRegularString(final String string, final int positionX,
+			final int positionY, final Color color) {
+		backBufferGraphics.setFont(fontRegular);
+		backBufferGraphics.setColor(color);
+		backBufferGraphics.drawString(string, positionX, positionY);
+	}
+
+	/**
+	 * Draws an empty rectangle outline.
+	 *
+	 * @param positionX Horizontal position of the left edge.
+	 * @param positionY Vertical position of the top edge.
+	 * @param width     Width of the box.
+	 * @param height    Height of the box.
+	 * @param color     Colour of the outline.
+	 */
+	public void drawBox(final int positionX, final int positionY,
+			final int width, final int height, final Color color) {
+		backBufferGraphics.setColor(color);
+		backBufferGraphics.drawRect(positionX, positionY, width, height);
+	}
+	
 	/**
 	 * For debugging purpouses, draws the canvas borders.
 	 * 
