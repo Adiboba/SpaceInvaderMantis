@@ -2,19 +2,19 @@
 
 ## 1. Workflow and rationale
 
-**Workflow** : GITHUB Workflow
+**Workflow** : GITHUB Flow
 
 **Rationale** : 
 
 We chose **GitHub Flow** because our project requires multiple team members to work on different features at the same time. It provides a simple workflow that allows us to develop features separately while keeping the main branch stable.
 
-1. *Short - lived branches from main* 
+1. *Short - lived branches from main* : 
 Each team member creates a branch from the latest main branch for a specific task. Since the branches are used only for a specific task and are merged after completion, there is less chance of large merge conflicts. Short-lived branches also make the changes easier for other team members to review.
 
-2. *Changes integrated through Pull Requests(PRs)*
+2. *Changes integrated through Pull Requests(PRs)* :
 Completed changes are submitted through a Pull Request instead of being directly pushed to main. This allows team members to review the purpose of the change, the code modifications, and the testing results before the changes are merged.
 
-3. *Stable main branch with parallel development*
+3. *Stable main branch with parallel development* :
 Our project has multiple requirements that can be developed by different team members. GitHub Flow allows team members to work on separate branches at the same time while keeping the main branch stable. This is useful because our team needs to make frequent changes during development.
 
 ---
@@ -299,6 +299,6 @@ flowchart TD
     I --> J{Review:<br/>1 approval + build passes?}
     J -- Changes requested --> K[Address feedback<br/>push new commits]
     K --> J
-    J -- Approved --> L[Squash and merge into main]
+    J -- Approved --> L[Regular merge into main]
     L --> M[Delete branch]
     M --> B
