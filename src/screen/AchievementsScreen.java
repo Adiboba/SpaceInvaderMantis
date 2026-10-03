@@ -118,7 +118,7 @@ public class AchievementsScreen extends Screen {
 		for (int i = 0; i < this.achievements.size(); i++)
 			drawAchievement(this.achievements.get(i),
 					FIRST_ROW_Y + i * ROW_SPACING, i == this.selected);
-		this.drawManager.drawKeyHints(this, "up down move, escback");
+		this.drawManager.drawKeyHints(this, "up down move, esc back");
 		this.drawManager.completeDrawing(this);
 	}
 
