@@ -557,7 +557,6 @@ public class GameScreen extends Screen {
 			drawManager.drawItemHint(this, this.items); // Item System (Team CS)
 		}
 
-
 		// Game over animation. AUTHORED BY: VFX TEAM (Effection)
 		if (this.shrinkingEnemies != null)
 			drawShrinkingEnemies();
