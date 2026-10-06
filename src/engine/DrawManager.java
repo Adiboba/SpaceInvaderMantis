@@ -206,7 +206,6 @@ public final class DrawManager {
 	}
 
 	/**
-<<<<<<< HEAD
 	 * Draws a sprite directly, without needing an Entity.
 	 *
 	 * @param type      Sprite to draw.
@@ -257,7 +256,6 @@ public final class DrawManager {
 	}
 	
 	/**
-=======
 	 * Draws a dropped coin as a filled circle (GoG - Currency System).
 	 * Coins have no entry in the shared sprite file, so they are drawn
 	 * here instead of through drawEntity().
@@ -321,7 +319,6 @@ public final class DrawManager {
 	}
 
 	/**
->>>>>>> upstream/main
 	 * For debugging purpouses, draws the canvas borders.
 	 * 
 	 * @param screen
