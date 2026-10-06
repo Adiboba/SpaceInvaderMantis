@@ -13,6 +13,8 @@ import engine.CurrencyManager;
 import engine.GameSettings;
 import engine.GameState;
 import engine.Achievement;
+import engine.DamageDimEffect;
+import engine.GlitchEffect;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -50,6 +52,8 @@ public class GameScreen extends Screen {
 	private static final int ACHIEVEMENT_POPUP_SLIDE_OUT = 350;
 	/** Height of the interface separation line. */
 	private static final int SEPARATION_LINE_HEIGHT = 40;
+	/** Lives at or below this value start the glitch. */
+	private static final int LOW_HEALTH_LIVES = 1;
 	/** Coins awarded when a regular enemy's drop chance succeeds. */
 	private static final int COIN_VALUE = 1;
 	/** Coins guaranteed when the special bonus ship is destroyed. */
@@ -98,6 +102,13 @@ public class GameScreen extends Screen {
 	private boolean levelFinished;
 	/** Checks if a bonus life is received. */
 	private boolean bonusLife;
+	/** Dims the screen when the player is hit. */
+	private DamageDimEffect damageDim;
+	/** Glitch effect for low health. */
+	private GlitchEffect glitch;
+	/** Diamonds earned this run but not yet cashed out; lost on death,
+	 * banked into DiamondManager only when the player cashes out. */
+	private int pendingDiamonds;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -129,6 +140,7 @@ public class GameScreen extends Screen {
 			this.lives++;
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
+		this.pendingDiamonds = gameState.getPendingDiamonds();
 	}
 
 	/**
@@ -148,6 +160,9 @@ public class GameScreen extends Screen {
 				.getCooldown(BONUS_SHIP_EXPLOSION);
 		this.screenFinishedCooldown = Core.getCooldown(SCREEN_CHANGE_INTERVAL);
 		this.bullets = new HashSet<Bullet>();
+		this.damageDim = new DamageDimEffect(800, 0.5f,
+        new java.awt.Color(150, 0, 0));  //new update dim effect
+		this.glitch = new GlitchEffect();
 		this.coins = new HashSet<Coin>();
 		this.achievementPopupQueue = new LinkedList<Achievement>();
 		this.coinDropManager = new CoinDropManager();
@@ -237,10 +252,13 @@ public class GameScreen extends Screen {
 			this.levelFinished = true;
 			this.screenFinishedCooldown.reset();
 
-			// Level cleared alive: coins still falling are collected so the
-			// last kills' drops aren't lost.
-			if (this.enemyShipFormation.isEmpty() && this.lives > 0)
+			// Level cleared alive: level N is worth N diamonds, kept pending
+			// until cashed out (see engine.DiamondManager), and coins still
+			// falling are collected so the last kills' drops aren't lost.
+			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
+				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
+			}
 		}
 
 		if (this.levelFinished && this.screenFinishedCooldown.checkFinished())
@@ -266,6 +284,8 @@ public class GameScreen extends Screen {
 		for (Bullet bullet : this.bullets)
 			drawManager.drawEntity(bullet, bullet.getPositionX(),
 					bullet.getPositionY());
+		// Damage dim (under HUD, so score/lives stay bright). AUTHORED BY: VFX TEAM (Effection)
+		drawManager.drawDamageDim(this, this.damageDim);   // ADD
 
 		for (Coin coin : this.coins)
 			drawManager.drawCoin(coin, coin.getPositionX(),
@@ -277,6 +297,10 @@ public class GameScreen extends Screen {
 		drawManager.drawCoinBalance(this, CurrencyManager.getInstance()
 				.getCoins());
 		drawManager.drawHorizontalLine(this, SEPARATION_LINE_HEIGHT - 1);
+		// Low-health glitch (covers game + HUD). AUTHORED BY: VFX TEAM (Effection)
+		this.glitch.setEnabled(this.lives > 0
+				&& this.lives <= LOW_HEALTH_LIVES && !this.levelFinished);
+		drawManager.drawGlitch(this, this.glitch);
 		// Countdown to game start.
 		if (!this.inputDelay.checkFinished()) {
 			int countdown = (int) ((INPUT_DELAY
@@ -327,6 +351,7 @@ public class GameScreen extends Screen {
 					if (!this.ship.isDestroyed()) {
 						this.ship.destroy();
 						this.lives--;
+						this.damageDim.trigger(); // <-*AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
 								+ " lives remaining.");
 					}
@@ -493,6 +518,6 @@ public class GameScreen extends Screen {
 	 */
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
-				this.bulletsShot, this.shipsDestroyed);
+				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds);
 	}
 }
