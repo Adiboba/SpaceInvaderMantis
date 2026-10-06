@@ -200,11 +200,7 @@ public final class DrawManager {
 	}
 
 	/**
-<<<<<<< HEAD
 	 * Draws a sprite using the game's standard two-pixel scale.
-=======
-	 * Draws a sprite directly, without needing an Entity.
->>>>>>> main
 	 *
 	 * @param spriteType Sprite to draw.
 	 * @param positionX Coordinates for the left side of the image.
@@ -317,8 +313,6 @@ public final class DrawManager {
 	}
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Draws a diamond balance as a small diamond icon followed by the
 	 * amount, centered horizontally at the given baseline, so it can be
 	 * stacked with the coin balance (GoG - Currency System).
@@ -355,7 +349,6 @@ public final class DrawManager {
 	}
 
 	/**
->>>>>>> main
 	 * For debugging purpouses, draws the canvas borders.
 	 * 
 	 * @param screen
