@@ -25,7 +25,8 @@ We use two main types of branches:
 
 - feature/ - used to develop new functionality, such as achievement systems and achievement unlock conditions.
 - fix/ - used to  fix bugs or problems found during development or testing.
-
+- refactor/ - used to restructure existing code to improve its readability, maintainability, or performance, without changing external behavior or logic.
+- docs/ - used to update code comments, fixing typos in user guides, or rewriting project markdown files. No source code is altered. 
 The development of the achievement system is divided into several batches. Each batch focuses on one part of the system and is tested before moving to the next stage. This allows the team to build the system step by step instead of developing all achievements at the same time.
 
 ### Fix Branch Priority

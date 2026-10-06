@@ -76,7 +76,9 @@ public final class DrawManager {
 		/** Bonus ship. */
 		EnemyShipSpecial,
 		/** Destroyed enemy ship. */
-		Explosion
+		Explosion,
+		/** Achievement trophy icon. */
+		Trophy
 	};
 
 	/**
@@ -102,6 +104,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.EnemyShipC2, new boolean[12][8]);
 			spriteMap.put(SpriteType.EnemyShipSpecial, new boolean[16][7]);
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
+			spriteMap.put(SpriteType.Trophy, new boolean[11][8]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
@@ -113,8 +116,12 @@ public final class DrawManager {
 
 		} catch (IOException e) {
 			logger.warning("Loading failed.");
+			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, 14);
+			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, 24);
 		} catch (FontFormatException e) {
 			logger.warning("Font formating failed.");
+			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, 14);
+			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, 24);
 		}
 	}
 
@@ -197,6 +204,56 @@ public final class DrawManager {
 							+ j * 2, 1, 1);
 	}
 
+	/**
+	 * Draws a sprite directly, without needing an Entity.
+	 *
+	 * @param type      Sprite to draw.
+	 * @param positionX Horizontal position of the left edge.
+	 * @param positionY Vertical position of the top edge.
+	 * @param color     Colour of the sprite.
+	 */
+	public void drawSprite(final SpriteType type, final int positionX,
+			final int positionY, final Color color) {
+		boolean[][] image = spriteMap.get(type);
+
+		backBufferGraphics.setColor(color);
+		for (int i = 0; i < image.length; i++)
+			for (int j = 0; j < image[i].length; j++)
+				if (image[i][j])
+					backBufferGraphics.drawRect(positionX + i * 2,
+							positionY + j * 2, 1, 1);
+	}
+
+	/**
+	 * Draws regular text at an exact position, left aligned.
+	 *
+	 * @param string    Text to draw.
+	 * @param positionX Horizontal position of the left edge.
+	 * @param positionY Vertical position of the baseline.
+	 * @param color     Colour of the text.
+	 */
+	public void drawRegularString(final String string, final int positionX,
+			final int positionY, final Color color) {
+		backBufferGraphics.setFont(fontRegular);
+		backBufferGraphics.setColor(color);
+		backBufferGraphics.drawString(string, positionX, positionY);
+	}
+
+	/**
+	 * Draws an empty rectangle outline.
+	 *
+	 * @param positionX Horizontal position of the left edge.
+	 * @param positionY Vertical position of the top edge.
+	 * @param width     Width of the box.
+	 * @param height    Height of the box.
+	 * @param color     Colour of the outline.
+	 */
+	public void drawBox(final int positionX, final int positionY,
+			final int width, final int height, final Color color) {
+		backBufferGraphics.setColor(color);
+		backBufferGraphics.drawRect(positionX, positionY, width, height);
+	}
+	
 	/**
 	 * For debugging purpouses, draws the canvas borders.
 	 * 
@@ -416,6 +473,31 @@ public final class DrawManager {
 		backBufferGraphics.drawString(yesString, yesX, answerY);
 		backBufferGraphics.setColor(yesSelected ? Color.WHITE : Color.GREEN);
 		backBufferGraphics.drawString(noString, noX, answerY);
+	}
+
+	/**
+	 * Draws an achievement-unlocked popup over the game.
+	 *
+	 * @param screen Screen where the popup is drawn.
+	 * @param achievement Newly unlocked achievement.
+	 */
+	public void drawAchievementUnlocked(final Screen screen,
+			final Achievement achievement) {
+		int boxWidth = screen.getWidth() / 2;
+		int boxHeight = fontRegularMetrics.getHeight() * 3;
+		int boxX = (screen.getWidth() - boxWidth) / 2;
+		int boxY = screen.getHeight() - boxHeight
+				- fontRegularMetrics.getHeight();
+
+		backBufferGraphics.setColor(Color.BLACK);
+		backBufferGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+		backBufferGraphics.setColor(Color.GREEN);
+		backBufferGraphics.drawRect(boxX, boxY, boxWidth, boxHeight);
+		drawCenteredRegularString(screen, "Achievement unlocked!", boxY
+				+ fontRegularMetrics.getHeight() * 3 / 2);
+		backBufferGraphics.setColor(Color.WHITE);
+		drawCenteredRegularString(screen, achievement.getName(), boxY
+				+ fontRegularMetrics.getHeight() * 5 / 2);
 	}
 
 	/**
@@ -664,5 +746,50 @@ public final class DrawManager {
 		else
 			drawCenteredBigString(screen, "GO!", screen.getHeight() / 2
 					+ fontBigMetrics.getHeight() / 3);
+	}
+
+	/**
+	 * Draws a centered row of text in the menu colours: green when
+	 * selected, white otherwise.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param string
+	 *            Text to draw.
+	 * @param height
+	 *            Height of the drawing.
+	 * @param selected
+	 *            Whether the row is currently selected.
+	 */
+	public void drawMenuRow(final Screen screen, final String string,
+			final int height, final boolean selected) {
+		drawMenuRow(screen, string, height, selected, true);
+	}
+
+	/**
+	 * Draws a centered row of text in the menu colours: green when
+	 * selected, dark grey when disabled, white otherwise.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param string
+	 *            Text to draw.
+	 * @param height
+	 *            Height of the drawing.
+	 * @param selected
+	 *            Whether the row is currently selected.
+	 * @param enabled
+	 *            Whether the row can be chosen.
+	 */
+	public void drawMenuRow(final Screen screen, final String string,
+			final int height, final boolean selected,
+			final boolean enabled) {
+		if (selected)
+			backBufferGraphics.setColor(Color.GREEN);
+		else if (!enabled)
+			backBufferGraphics.setColor(Color.DARK_GRAY);
+		else
+			backBufferGraphics.setColor(Color.WHITE);
+		drawCenteredRegularString(screen, string, height);
 	}
 }
