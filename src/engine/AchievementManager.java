@@ -15,6 +15,8 @@ public class AchievementManager {
 
 	/** Number of player kills required for First Flight. */
 	private static final int THREE_KILLS_TARGET = 3;
+	/** The id we use for the weakest ship. */
+	public static final String STARTER_SHIP_ID = "starter";
 
 	/** Persistent player profile. */
 	private PlayerProfile playerProfile;
@@ -37,6 +39,7 @@ public class AchievementManager {
 
 		// Page 1: normal achievements. Add new ones below.
 		addFirstKillAchievement();
+		addStarterShipWinAchievement();
 
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
@@ -47,7 +50,15 @@ public class AchievementManager {
 		addNormalAchievement(new Achievement("first_kill", "First Flight",
 				"Welcome to Invaders.", THREE_KILLS_TARGET,
 				SpriteType.FirstFlight, this.playerProfile
-						.isAchievementUnlocked("first_kill")));
+				.isAchievementUnlocked("first_kill")));
+	}
+
+	/** Adds the Humble Beginnings achievement. */
+	private void addStarterShipWinAchievement() {
+		addNormalAchievement(new Achievement("starter_ship_win",
+				"Humble Beginnings", "Beat the game with the starter ship.", 0,
+				SpriteType.Weakestship, this.playerProfile
+				.isAchievementUnlocked("starter_ship_win")));
 	}
 
 	/**
@@ -64,6 +75,7 @@ public class AchievementManager {
 	 *
 	 * @param achievement Achievement to add.
 	 */
+	@SuppressWarnings("unused")
 	private void addTierAchievement(final Achievement achievement) {
 		addToPage(this.tierAchievements, achievement, "tier");
 	}
@@ -76,7 +88,7 @@ public class AchievementManager {
 	 * @param pageName    Page name, used in the log message.
 	 */
 	private void addToPage(final List<Achievement> page,
-			final Achievement achievement, final String pageName) {
+						   final Achievement achievement, final String pageName) {
 		if (page.size() >= ACHIEVEMENTS_PER_PAGE) {
 			Core.getLogger().warning("The " + pageName + " achievement page "
 					+ "is full, skipping " + achievement.getId() + ".");
@@ -96,8 +108,9 @@ public class AchievementManager {
 
 		for (Achievement achievement : getAchievements())
 			if (!achievement.isUnlocked()
+					&& achievement.getRequiredEnemyKills() > 0
 					&& this.playerProfile.getTotalEnemiesKilled()
-							>= achievement.getRequiredEnemyKills()) {
+					>= achievement.getRequiredEnemyKills()) {
 				achievement.unlock();
 				this.playerProfile.unlockAchievement(achievement.getId());
 				// TODO Connect the shared CurrencyManager reward here when its API is available.
@@ -105,6 +118,27 @@ public class AchievementManager {
 			}
 
 		saveProfile();
+		return unlockedAchievement;
+	}
+
+	/**
+	 * Called when the player beats the game.
+	 *
+	 * @param shipId Ship used for this run.
+	 * @return Newly unlocked achievement, or null.
+	 */
+	public final Achievement recordGameWon(final String shipId) {
+		Achievement unlockedAchievement = null;
+		for (Achievement achievement : getAchievements())
+			if (!achievement.isUnlocked()
+					&& achievement.getId().equals("starter_ship_win")
+					&& STARTER_SHIP_ID.equals(shipId)) {
+				achievement.unlock();
+				this.playerProfile.unlockAchievement(achievement.getId());
+				unlockedAchievement = achievement;
+			}
+		if (unlockedAchievement != null)
+			saveProfile();
 		return unlockedAchievement;
 	}
 

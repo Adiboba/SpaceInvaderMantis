@@ -20,9 +20,9 @@ import entity.Ship;
 
 /**
  * Manages screen drawing.
- * 
+ *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- * 
+ *
  */
 public final class DrawManager {
 
@@ -79,7 +79,9 @@ public final class DrawManager {
 		/** Destroyed enemy ship. */
 		Explosion,
 		/** First Flight achievement icon. */
-		FirstFlight
+		FirstFlight,
+		/** Weakestship sprite. */
+		Weakestship
 	};
 
 	/**
@@ -106,6 +108,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.EnemyShipSpecial, new boolean[16][7]);
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
 			spriteMap.put(SpriteType.FirstFlight, new boolean[11][8]);
+			spriteMap.put(SpriteType.Weakestship, new boolean[11][11]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
@@ -128,7 +131,7 @@ public final class DrawManager {
 
 	/**
 	 * Returns shared instance of DrawManager.
-	 * 
+	 *
 	 * @return Shared instance of DrawManager.
 	 */
 	protected static DrawManager getInstance() {
@@ -139,7 +142,7 @@ public final class DrawManager {
 
 	/**
 	 * Sets the frame to draw the image on.
-	 * 
+	 *
 	 * @param currentFrame
 	 *            Frame to draw on.
 	 */
@@ -150,7 +153,7 @@ public final class DrawManager {
 	/**
 	 * First part of the drawing process. Initialices buffers, draws the
 	 * background and prepares the images.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw in.
 	 */
@@ -174,7 +177,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws the completed drawing on screen.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 */
@@ -185,7 +188,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws an entity, using the apropiate image.
-	 * 
+	 *
 	 * @param entity
 	 *            Entity to be drawn.
 	 * @param positionX
@@ -248,7 +251,7 @@ public final class DrawManager {
 		backBufferGraphics.setColor(color);
 		backBufferGraphics.drawRect(positionX, positionY, width, height);
 	}
-	
+
 	/**
 	 * Draws a dropped coin as a filled circle (GoG - Currency System).
 	 * Coins have no entry in the shared sprite file, so they are drawn
@@ -606,8 +609,7 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GREEN);
 		backBufferGraphics.drawString("ACHIEVEMENT UNLOCKED", boxX + 34,
 				boxY + 16);
-		drawSprite(achievement.getSpriteType(), boxX + 8, boxY + 23,
-				Color.YELLOW);
+		drawSprite(achievement.getSpriteType(), boxX + 8, boxY + 20,achievement.getSpriteType()== SpriteType.Weakestship ? Color.RED : Color.YELLOW);
 		backBufferGraphics.setColor(Color.WHITE);
 		backBufferGraphics.drawString(achievement.getName(), boxX + 34,
 				boxY + 35);
