@@ -321,6 +321,8 @@ public class GameScreen extends Screen {
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
+				showUnlockedAchievement(Core.getAchievementManager()
+						.recordLevelCompleted(this.level));
 
 				// Last level cleared alive: the game is beaten.
 				if (this.level == Core.getNumLevels())
