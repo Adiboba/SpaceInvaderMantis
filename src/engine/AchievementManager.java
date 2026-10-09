@@ -18,6 +18,10 @@ public class AchievementManager {
 	private static final int THREE_KILLS_TARGET = 3;
 	/** The id we use for the weakest ship. */
 	public static final String STARTER_SHIP_ID = "starter";
+	/** Level that must be cleared to unlock Endless Mode. */
+	private static final int ENDLESS_UNLOCK_LEVEL = 10;
+	/** Identifier of the Infinity Void achievement. */
+	private static final String INFINITY_VOID_ID = "infinity_void";
 
 	/** Persistent player profile. */
 	private PlayerProfile playerProfile;
@@ -41,6 +45,7 @@ public class AchievementManager {
 		// Page 1: normal achievements. Add new ones below.
 		addFirstKillAchievement();
 		addStarterShipWinAchievement();
+		addInfinityVoidAchievement();
 
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
@@ -60,6 +65,19 @@ public class AchievementManager {
 				"Humble Beginnings", "Beat the game with the starter ship.", 0,
 				SpriteType.Weakestship, this.playerProfile
 				.isAchievementUnlocked("starter_ship_win"), Color.RED));
+	}
+
+	/**
+	 * Adds the Infinity Void achievement. It has no kill requirement (0);
+	 * recordLevelCompleted() unlocks it.
+	 */
+	private void addInfinityVoidAchievement() {
+		addNormalAchievement(new Achievement(INFINITY_VOID_ID,
+				"Infinity Void", "Clear level " + ENDLESS_UNLOCK_LEVEL
+						+ " to unlock Endless Mode.", 0,
+				SpriteType.InfinityVoid, this.playerProfile
+						.isAchievementUnlocked(INFINITY_VOID_ID),
+				new Color(160, 32, 240)));
 	}
 
 	/**
@@ -141,6 +159,35 @@ public class AchievementManager {
 		if (unlockedAchievement != null)
 			saveProfile();
 		return unlockedAchievement;
+	}
+
+	/**
+	 * Records that the player cleared a level.
+	 *
+	 * @param level Number of the level just cleared.
+	 * @return Newly unlocked achievement, or null when nothing unlocks.
+	 */
+	public final Achievement recordLevelCompleted(final int level) {
+		if (level >= ENDLESS_UNLOCK_LEVEL)
+			return unlockById(INFINITY_VOID_ID);
+		return null;
+	}
+
+	/**
+	 * Unlocks one achievement by identifier and saves the progress.
+	 *
+	 * @param id Identifier of the achievement to unlock.
+	 * @return The achievement if it was just unlocked, otherwise null.
+	 */
+	private Achievement unlockById(final String id) {
+		for (Achievement achievement : getAchievements())
+			if (achievement.getId().equals(id) && !achievement.isUnlocked()) {
+				achievement.unlock();
+				this.playerProfile.unlockAchievement(id);
+				saveProfile();
+				return achievement;
+			}
+		return null;
 	}
 
 	/** Saves the player profile, retaining progress after restarting. */
