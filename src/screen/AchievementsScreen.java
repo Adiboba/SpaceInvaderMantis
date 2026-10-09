@@ -178,32 +178,28 @@ public class AchievementsScreen extends Screen {
 	 * @param isSelected  Whether this row is currently highlighted.
 	 */
 	private void drawAchievement(final Achievement achievement,
-			final int positionY, final boolean isSelected) {
-		Color trophyColor;
-		if (achievement.isUnlocked())
-			trophyColor = UNLOCKED;
-		else
-			trophyColor = LOCKED;
-		Color nameColor;
-		if (isSelected)
-			nameColor = SELECTED;
-		else
-			nameColor = UNSELECTED;
-		DrawManager.SpriteType icon = achievement.getSpriteType();
-		if (icon == null)
-			icon = DrawManager.SpriteType.FirstFlight;
-		this.drawManager.drawAchievementSprite(icon, TROPHY_X, positionY, trophyColor);
-		this.drawManager.drawRegularString(achievement.getName(),
-				TEXT_X, positionY + 8, nameColor);
-		this.drawManager.drawRegularString(Core.getAchievementManager()
-				.getRequirementText(achievement), TEXT_X,
-				positionY + 24, MUTED);
-		if (achievement.isUnlocked())
-			this.drawManager.drawRegularString("UNLOCKED",
-					STATUS_X, positionY + 8, SELECTED);
-		else
-			this.drawManager.drawRegularString(
-					Core.getAchievementManager().getProgressText(achievement),
-					STATUS_X, positionY + 8, MUTED);
-	}
+        final int positionY, final boolean isSelected) {
+    Color trophyColor = achievement.isUnlocked()
+            ? achievement.getIconColor() : LOCKED;
+    Color nameColor = isSelected ? SELECTED : UNSELECTED;
+
+    DrawManager.SpriteType icon = achievement.getSpriteType();
+    if (icon == null) {
+        icon = DrawManager.SpriteType.FirstFlight;
+    }
+
+    AchievementManager manager = Core.getAchievementManager();
+    this.drawManager.drawAchievementSprite(
+            icon, TROPHY_X, positionY, trophyColor);
+    this.drawManager.drawRegularString(
+            achievement.getName(), TEXT_X, positionY + 8, nameColor);
+    this.drawManager.drawRegularString(
+            manager.getRequirementText(achievement),
+            TEXT_X, positionY + 24, MUTED);
+    this.drawManager.drawRegularString(
+            manager.getProgressText(achievement),
+            STATUS_X, positionY + 8,
+            achievement.isUnlocked() ? SELECTED : MUTED);
+}
+
 }
