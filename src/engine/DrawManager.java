@@ -99,7 +99,9 @@ public final class DrawManager {
 		/** Weakestship sprite. */
 		Weakestship,
 		/** Infinity Void achievement icon. */
-		InfinityVoid
+		InfinityVoid,
+        /** First Boss Kill achievement icon. */
+        BossKill
 	};
 
 	/**
@@ -128,6 +130,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.FirstFlight, new boolean[11][8]);
 			spriteMap.put(SpriteType.Weakestship, new boolean[11][11]);
 			spriteMap.put(SpriteType.InfinityVoid, new boolean[11][11]);
+            spriteMap.put(SpriteType.BossKill, new boolean[11][11]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
