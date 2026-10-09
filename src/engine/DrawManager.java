@@ -1051,21 +1051,8 @@ public final class DrawManager {
 	}
 
 	/**
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 * Any further inquiries please contact us.
-=======
->>>>>>> 0e054c1 (feat(gameover): add game over animation)
-=======
-	 * AUTHORED BY: VFX TEAM (Effection)
-	 * Any further inquiries please contact us.
->>>>>>> 7f72520 (docs(gameover): add VFX team authorship comments)
-=======
-	 * AUTHORED BY: VFX TEAM (Effection)
-	 * Any further inquiries please contact us.
->>>>>>> f19abca (fix(main): recovered latest main until dian's PR merge)
 	 * Draws an entity shrunk around its center and faded, used when enemies
 	 * disappear on game over.
 	 *
@@ -1099,37 +1086,11 @@ public final class DrawManager {
 	}
 
 	/**
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 * Any further inquiries please contact us.
-=======
->>>>>>> 0e054c1 (feat(gameover): add game over animation)
-=======
-	 * AUTHORED BY: VFX TEAM (Effection)
-	 * Any further inquiries please contact us.
->>>>>>> 7f72520 (docs(gameover): add VFX team authorship comments)
-=======
-	 * AUTHORED BY: VFX TEAM (Effection)
-	 * Any further inquiries please contact us.
->>>>>>> f19abca (fix(main): recovered latest main until dian's PR merge)
 	 * Draws the game over banner shown on the game screen, typed out up to
 	 * the given number of characters. The text stays centered as a whole so
 	 * letters do not shift while typing.
-	 *
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-	 *
-=======
->>>>>>> 0e054c1 (feat(gameover): add game over animation)
-=======
-	 *
->>>>>>> 7f72520 (docs(gameover): add VFX team authorship comments)
-=======
-	 *
->>>>>>> f19abca (fix(main): recovered latest main until dian's PR merge)
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param text
@@ -1149,21 +1110,8 @@ public final class DrawManager {
 
 	/**
 	 * Covers the screen with a translucent black layer, used to fade out.
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 * Any further inquiries please contact us.
-=======
->>>>>>> 0e054c1 (feat(gameover): add game over animation)
-=======
-	 * AUTHORED BY: VFX TEAM (Effection)
-	 * Any further inquiries please contact us.
->>>>>>> 7f72520 (docs(gameover): add VFX team authorship comments)
-=======
-	 * AUTHORED BY: VFX TEAM (Effection)
-	 * Any further inquiries please contact us.
->>>>>>> f19abca (fix(main): recovered latest main until dian's PR merge)
 	 *
 	 * @param screen
 	 *            Screen to draw on.
