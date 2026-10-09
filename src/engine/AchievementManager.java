@@ -1,5 +1,6 @@
 package engine;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,7 +59,7 @@ public class AchievementManager {
 		addNormalAchievement(new Achievement("starter_ship_win",
 				"Humble Beginnings", "Beat the game with the starter ship.", 0,
 				SpriteType.Weakestship, this.playerProfile
-				.isAchievementUnlocked("starter_ship_win")));
+				.isAchievementUnlocked("starter_ship_win"), Color.RED));
 	}
 
 	/**

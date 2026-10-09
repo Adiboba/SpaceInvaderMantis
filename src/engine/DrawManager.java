@@ -612,7 +612,7 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GREEN);
 		backBufferGraphics.drawString("ACHIEVEMENT UNLOCKED", boxX + 34,
 				boxY + 16);
-		drawSprite(achievement.getSpriteType(), boxX + 8, boxY + 20,achievement.getSpriteType()== SpriteType.Weakestship ? Color.RED : Color.YELLOW);
+		drawSprite(achievement.getSpriteType(), boxX + 8, boxY + 20, achievement.getIconColor());
 		backBufferGraphics.setColor(Color.WHITE);
 		backBufferGraphics.drawString(achievement.getName(), boxX + 34,
 				boxY + 35);

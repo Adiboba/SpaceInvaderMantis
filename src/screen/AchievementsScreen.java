@@ -180,12 +180,8 @@ public class AchievementsScreen extends Screen {
 	private void drawAchievement(final Achievement achievement,
 								 final int positionY, final boolean isSelected) {
 		Color trophyColor;
-		if (achievement.isUnlocked()
-				&& achievement.getSpriteType()
-				== DrawManager.SpriteType.Weakestship)
-			trophyColor = Color.RED;
-		else if (achievement.isUnlocked())
-			trophyColor = UNLOCKED;
+		if (achievement.isUnlocked())
+			trophyColor = achievement.getIconColor();
 		else
 			trophyColor = LOCKED;
 		Color nameColor;
