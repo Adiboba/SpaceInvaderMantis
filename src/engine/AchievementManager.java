@@ -55,7 +55,9 @@ public class AchievementManager {
 		addFirstKillAchievement();
 		addStarterShipWinAchievement();
 		addInfinityVoidAchievement();
+		addFirstBossKill();
 		addFleetMasterAchievement();
+
 
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
@@ -89,6 +91,18 @@ public class AchievementManager {
 						.isAchievementUnlocked(INFINITY_VOID_ID),
 				new Color(160, 32, 240)));
 	}
+    /**
+     * Adds the Buggin' the Boss achievement.
+     */
+    private void addFirstBossKill() {
+        addNormalAchievement(new Achievement(
+                "first_boss_kill",
+                "Buggin' the Boss",
+                "Defeat a boss for the first time.",
+                0, SpriteType.BossKill,
+                this.playerProfile.isAchievementUnlocked("first_boss_kill"),
+                Color.ORANGE));
+    }
 
 	/** Adds the Fleet Master achievement.It has no kill requirement(0)
 	 * */
@@ -268,6 +282,14 @@ public class AchievementManager {
 			return unlockById(INFINITY_VOID_ID);
 		return null;
 	}
+    /**
+     * Records the first boss defeat.
+     *
+     * @return Newly unlocked achievement, or null if already unlocked.
+     */
+    public final Achievement recordBossDefeated() {
+        return unlockById("first_boss_kill");
+    }
 
 	/**
 	 * Unlocks one achievement by identifier and saves the progress.
