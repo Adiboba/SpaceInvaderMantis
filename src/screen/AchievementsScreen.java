@@ -192,19 +192,18 @@ public class AchievementsScreen extends Screen {
 		DrawManager.SpriteType icon = achievement.getSpriteType();
 		if (icon == null)
 			icon = DrawManager.SpriteType.FirstFlight;
-		this.drawManager.drawSprite(icon, TROPHY_X, positionY, trophyColor);
+		this.drawManager.drawAchievementSprite(icon, TROPHY_X, positionY, trophyColor);
 		this.drawManager.drawRegularString(achievement.getName(),
 				TEXT_X, positionY + 8, nameColor);
-		this.drawManager.drawRegularString("Unlock: defeat "
-				+ achievement.getRequiredEnemyKills() + " enemies.", TEXT_X,
+		this.drawManager.drawRegularString(Core.getAchievementManager()
+				.getRequirementText(achievement), TEXT_X,
 				positionY + 24, MUTED);
 		if (achievement.isUnlocked())
 			this.drawManager.drawRegularString("UNLOCKED",
 					STATUS_X, positionY + 8, SELECTED);
 		else
 			this.drawManager.drawRegularString(
-					this.totalKills + "/" +
-							achievement.getRequiredEnemyKills(),
+					Core.getAchievementManager().getProgressText(achievement),
 					STATUS_X, positionY + 8, MUTED);
 	}
 }

@@ -79,7 +79,9 @@ public final class DrawManager {
 		/** Destroyed enemy ship. */
 		Explosion,
 		/** First Flight achievement icon. */
-		FirstFlight
+		FirstFlight,
+		/** Fleet Master achievement icon. */
+		FleetMaster
 	};
 
 	/**
@@ -106,6 +108,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.EnemyShipSpecial, new boolean[16][7]);
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
 			spriteMap.put(SpriteType.FirstFlight, new boolean[11][8]);
+			spriteMap.put(SpriteType.FleetMaster, new boolean[23][23]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
@@ -208,15 +211,71 @@ public final class DrawManager {
 	 * @param color Color used for filled pixels.
 	 */
 	public void drawSprite(final SpriteType spriteType, final int positionX,
-			final int positionY, final Color color) {
+						   final int positionY, final Color color) {
 		boolean[][] image = spriteMap.get(spriteType);
 
 		backBufferGraphics.setColor(color);
+
 		for (int i = 0; i < image.length; i++)
 			for (int j = 0; j < image[i].length; j++)
 				if (image[i][j])
-					backBufferGraphics.drawRect(positionX + i * 2, positionY
-							+ j * 2, 1, 1);
+					backBufferGraphics.drawRect(
+							positionX + i * 2,
+							positionY + j * 2,
+							1, 1);
+	}
+	/**
+	 * Draws achievement icons, with RGB colors for Fleet Master.
+	 */
+	public void drawAchievementSprite(final SpriteType spriteType,
+										final int positionX, final int positionY, final Color color) {
+
+		// Other achievements use the original drawing method.
+		if (spriteType != SpriteType.FleetMaster) {
+			drawSprite(spriteType, positionX, positionY, color);
+			return;
+		}
+
+		// Check Fleet Master's actual unlock status.
+		boolean unlocked = false;
+
+		for (Achievement achievement
+				: Core.getAchievementManager().getAchievements()) {
+			if (AchievementManager.LEVEL10_ALL_SHIPS_ID.equals(
+					achievement.getId())) {
+				unlocked = achievement.isUnlocked();
+				break;
+			}
+		}
+
+		boolean[][] image = spriteMap.get(spriteType);
+
+		for (int x = 0; x < image.length; x++) {
+			for (int y = 0; y < image[x].length; y++) {
+				if (!image[x][y]) {
+					continue;
+				}
+
+				if (!unlocked) {
+					// Locked: every filled pixel is grey.
+					backBufferGraphics.setColor(Color.GRAY);
+				} else if (y >= 11) {
+					// Unlocked: bottom-middle ship is green.
+					backBufferGraphics.setColor(Color.GREEN);
+				} else if (x < 12) {
+					// Unlocked: top-left ship is red.
+					backBufferGraphics.setColor(Color.RED);
+				} else {
+					// Unlocked: top-right ship is blue.
+					backBufferGraphics.setColor(Color.BLUE);
+				}
+
+				backBufferGraphics.fillRect(
+						positionX + x,
+						positionY + y,
+						1, 1);
+			}
+		}
 	}
 
 	/**
@@ -606,8 +665,8 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GREEN);
 		backBufferGraphics.drawString("ACHIEVEMENT UNLOCKED", boxX + 34,
 				boxY + 16);
-		drawSprite(achievement.getSpriteType(), boxX + 8, boxY + 23,
-				Color.YELLOW);
+		drawAchievementSprite(achievement.getSpriteType(),
+				boxX + 8, boxY + 23, Color.YELLOW);
 		backBufferGraphics.setColor(Color.WHITE);
 		backBufferGraphics.drawString(achievement.getName(), boxX + 34,
 				boxY + 35);
@@ -625,8 +684,8 @@ public final class DrawManager {
 		int contentX = iconX + 40;
 		int nameY = screen.getHeight() / 2;
 		String status = achievement.isUnlocked() ? "UNLOCKED" : "LOCKED";
-
-		drawSprite(achievement.getSpriteType(), iconX, nameY - 20,
+		drawAchievementSprite(achievement.getSpriteType(),
+				iconX, nameY - 20,
 				achievement.isUnlocked() ? Color.YELLOW : Color.DARK_GRAY);
 		backBufferGraphics.setFont(fontRegular);
 		backBufferGraphics.setColor(achievement.isUnlocked() ? Color.WHITE
@@ -634,10 +693,12 @@ public final class DrawManager {
 		backBufferGraphics.drawString(achievement.getName() + " - " + status,
 				contentX, nameY);
 		backBufferGraphics.setColor(Color.GRAY);
-		backBufferGraphics.drawString("Unlock: defeat "
-				+ achievement.getRequiredEnemyKills() + " enemies.", contentX,
+		backBufferGraphics.drawString(Core.getAchievementManager()
+				.getRequirementText(achievement), contentX,
 				nameY + fontRegularMetrics.getHeight() * 2);
 	}
+
+
 
 	/**
 	 * Draws the title of a screen reached from the main menu, in the same
