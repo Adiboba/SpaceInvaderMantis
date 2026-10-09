@@ -81,7 +81,9 @@ public final class DrawManager {
 		/** First Flight achievement icon. */
 		FirstFlight,
 		/** Weakestship sprite. */
-		Weakestship
+		Weakestship,
+		/** Infinity Void achievement icon. */
+		InfinityVoid
 	};
 
 	/**
@@ -109,6 +111,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
 			spriteMap.put(SpriteType.FirstFlight, new boolean[11][8]);
 			spriteMap.put(SpriteType.Weakestship, new boolean[11][11]);
+			spriteMap.put(SpriteType.InfinityVoid, new boolean[11][11]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
