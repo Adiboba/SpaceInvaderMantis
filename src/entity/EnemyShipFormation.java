@@ -263,7 +263,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 			for (List<EnemyShip> column : this.enemyShips) {
 				destroyed = new ArrayList<EnemyShip>();
 				for (EnemyShip ship : column) {
-					if (ship != null && ship.isFadeFinished()) {
+					if (ship != null && ship.isDestroyed()) {
 						destroyed.add(ship);
 						this.logger.info("Removed enemy "
 								+ column.indexOf(ship) + " from column "
