@@ -53,14 +53,9 @@ public class AchievementManager {
 
 		// Page 1: normal achievements. Add new ones below.
 		addFirstKillAchievement();
-		this.level10AllShips = new Achievement(LEVEL10_ALL_SHIPS_ID,
-				"Fleet Master", "Clear level 10 with every ship.", 0,
-				SpriteType.FleetMaster,
-				this.playerProfile.isAchievementUnlocked(LEVEL10_ALL_SHIPS_ID),
-				Requirement.LEVEL10_ALL_SHIPS);
-		addNormalAchievement(this.level10AllShips);
 		addStarterShipWinAchievement();
 		addInfinityVoidAchievement();
+		addFleetMasterAchievement();
 
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
@@ -93,6 +88,17 @@ public class AchievementManager {
 				SpriteType.InfinityVoid, this.playerProfile
 						.isAchievementUnlocked(INFINITY_VOID_ID),
 				new Color(160, 32, 240)));
+	}
+
+	/** Adds the Fleet Master achievement.It has no kill requirement(0)
+	 * */
+	private void addFleetMasterAchievement(){
+		this.level10AllShips = new Achievement(LEVEL10_ALL_SHIPS_ID,
+				"Fleet Master", "Clear level 10 with every ship.", 0,
+				SpriteType.FleetMaster,
+				this.playerProfile.isAchievementUnlocked(LEVEL10_ALL_SHIPS_ID),
+				Requirement.LEVEL10_ALL_SHIPS);
+		addNormalAchievement(this.level10AllShips);
 	}
 
 	/**

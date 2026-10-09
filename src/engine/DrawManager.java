@@ -231,60 +231,6 @@ public final class DrawManager {
 							1, 1);
 	}
 	/**
-	 * Draws achievement icons, with RGB colors for Fleet Master.
-	 */
-	public void drawAchievementSprite(final SpriteType spriteType,
-										final int positionX, final int positionY, final Color color) {
-
-		// Other achievements use the original drawing method.
-		if (spriteType != SpriteType.FleetMaster) {
-			drawSprite(spriteType, positionX, positionY, color);
-			return;
-		}
-
-		// Check Fleet Master's actual unlock status.
-		boolean unlocked = false;
-
-		for (Achievement achievement
-				: Core.getAchievementManager().getAchievements()) {
-			if (AchievementManager.LEVEL10_ALL_SHIPS_ID.equals(
-					achievement.getId())) {
-				unlocked = achievement.isUnlocked();
-				break;
-			}
-		}
-
-		boolean[][] image = spriteMap.get(spriteType);
-
-		for (int x = 0; x < image.length; x++) {
-			for (int y = 0; y < image[x].length; y++) {
-				if (!image[x][y]) {
-					continue;
-				}
-
-				if (!unlocked) {
-					// Locked: every filled pixel is grey.
-					backBufferGraphics.setColor(Color.GRAY);
-				} else if (y >= 11) {
-					// Unlocked: bottom-middle ship is green.
-					backBufferGraphics.setColor(Color.GREEN);
-				} else if (x < 12) {
-					// Unlocked: top-left ship is red.
-					backBufferGraphics.setColor(Color.RED);
-				} else {
-					// Unlocked: top-right ship is blue.
-					backBufferGraphics.setColor(Color.BLUE);
-				}
-
-				backBufferGraphics.fillRect(
-						positionX + x,
-						positionY + y,
-						1, 1);
-			}
-		}
-	}
-
-	/**
 	 * Draws regular text at an exact position, left aligned.
 	 *
 	 * @param string    Text to draw.
@@ -671,7 +617,7 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GREEN);
 		backBufferGraphics.drawString("ACHIEVEMENT UNLOCKED", boxX + 34,
 				boxY + 16);
-		drawAchievementSprite(achievement.getSpriteType(),
+		drawSprite(achievement.getSpriteType(),
 				boxX + 8, boxY + 20, achievement.getIconColor());
 		backBufferGraphics.setColor(Color.WHITE);
 		backBufferGraphics.drawString(achievement.getName(), boxX + 34,
@@ -690,7 +636,7 @@ public final class DrawManager {
 		int contentX = iconX + 40;
 		int nameY = screen.getHeight() / 2;
 		String status = achievement.isUnlocked() ? "UNLOCKED" : "LOCKED";
-		drawAchievementSprite(achievement.getSpriteType(),
+		drawSprite(achievement.getSpriteType(),
 				iconX, nameY - 20,
 				achievement.isUnlocked() ? achievement.getIconColor() : Color.DARK_GRAY);
 		backBufferGraphics.setFont(fontRegular);
@@ -703,7 +649,26 @@ public final class DrawManager {
 				.getRequirementText(achievement), contentX,
 				nameY + fontRegularMetrics.getHeight() * 2);
 	}
+	/**Draw smaller sprite in achievement
+	 *
+	 */
+	public void drawSmallSprite(final SpriteType spriteType,
+								final int positionX, final int positionY, final Color color) {
 
+		boolean[][] image = spriteMap.get(spriteType);
+		backBufferGraphics.setColor(color);
+
+		for (int x = 0; x < image.length; x++) {
+			for (int y = 0; y < image[x].length; y++) {
+				if (image[x][y]) {
+					backBufferGraphics.fillRect(
+							positionX + x,
+							positionY + y,
+							1, 1);
+				}
+			}
+		}
+	}
 
 
 	/**
