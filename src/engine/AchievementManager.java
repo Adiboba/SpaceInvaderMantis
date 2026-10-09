@@ -98,41 +98,6 @@ public class AchievementManager {
 	}
 
 	/**
-	 * Adds an achievement to page 1 (normal achievements).
-	 *
-	 * @param achievement Achievement to add.
-	 */
-	private void addNormalAchievement(final Achievement achievement) {
-		addToPage(this.normalAchievements, achievement, "normal");
-	}
-
-	/**
-	 * Adds an achievement to page 2 (tier achievements).
-	 *
-	 * @param achievement Achievement to add.
-	 */
-	private void addTierAchievement(final Achievement achievement) {
-		addToPage(this.tierAchievements, achievement, "tier");
-	}
-
-	/**
-	 * Adds an achievement to a page, refusing it when the page is full.
-	 *
-	 * @param page        Page list to add to.
-	 * @param achievement Achievement to add.
-	 * @param pageName    Page name, used in the log message.
-	 */
-	private void addToPage(final List<Achievement> page,
-			final Achievement achievement, final String pageName) {
-		if (page.size() >= ACHIEVEMENTS_PER_PAGE) {
-			Core.getLogger().warning("The " + pageName + " achievement page "
-					+ "is full, skipping " + achievement.getId() + ".");
-			return;
-		}
-		page.add(achievement);
-	}
-
-	/**
 	 * Records one confirmed enemy defeat and saves the resulting progress.
 	 *
 	 * @return Newly unlocked achievement, or null when nothing unlocks.
