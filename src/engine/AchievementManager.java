@@ -15,7 +15,7 @@ import engine.DrawManager.SpriteType;
 public class AchievementManager {
 
 	/** Most achievements a single page of the achievements screen shows. */
-	public static final int ACHIEVEMENTS_PER_PAGE = 5;
+	public static final int ACHIEVEMENTS_PER_PAGE = 6;
 
 	/** Number of player kills required for First Flight. */
 	private static final int THREE_KILLS_TARGET = 3;
@@ -69,6 +69,9 @@ public class AchievementManager {
 		addBronzeHunterAchievement();
 		addSilverHunterAchievement();
 		addGoldHunterAchievement();
+		addBronzeSurvivorAchievement();
+		addSilverSurvivorAchievement();
+		addGoldSurvivorAchievement();
 	}
 
 	/** Adds the First Flight achievement. */
@@ -150,6 +153,32 @@ public class AchievementManager {
 				new Color(255, 215, 0)));
 	}
 
+	/** Adds the Bronze survival tier for ending a run alive. */
+	private void addBronzeSurvivorAchievement() {
+		addTierAchievement(new Achievement("bronze_survivor",
+				"Bronze Survivor", "Finish a run with at least 1 life.", 0,
+				SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("bronze_survivor"),
+				Requirement.RUN_SURVIVAL, new Color(205, 127, 50)));
+	}
+
+	/** Adds the Silver survival tier for ending a run with two lives. */
+	private void addSilverSurvivorAchievement() {
+		addTierAchievement(new Achievement("silver_survivor",
+				"Silver Survivor", "Finish a run with 2 or more lives.", 0,
+				SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("silver_survivor"),
+				Requirement.RUN_SURVIVAL, new Color(192, 192, 192)));
+	}
+
+	/** Adds the Gold survival tier for completing a run without damage. */
+	private void addGoldSurvivorAchievement() {
+		addTierAchievement(new Achievement("gold_survivor", "Gold Survivor",
+				"Finish a run without taking damage.", 0, SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("gold_survivor"),
+				Requirement.RUN_SURVIVAL, new Color(255, 215, 0)));
+	}
+
 	/**
 	 * Adds an achievement to page 1 (normal achievements).
 	 *
@@ -209,6 +238,30 @@ public class AchievementManager {
 
 		saveProfile();
 		return unlockedAchievement;
+	}
+
+	/**
+	 * Records an alive run completion for the survival achievement tiers.
+	 * Extra-life items can increase the Silver tier's life count, but only an
+	 * actual player hit can disqualify the Gold tier.
+	 *
+	 * @param livesRemaining Lives remaining when the run ended.
+	 * @param tookDamage Whether the player was hit during the run.
+	 */
+	public final void recordRunCompleted(final int livesRemaining,
+			final boolean tookDamage) {
+		if (livesRemaining <= 0)
+			return;
+		unlockSurvivalAchievement("bronze_survivor", true);
+		unlockSurvivalAchievement("silver_survivor", livesRemaining >= 2);
+		unlockSurvivalAchievement("gold_survivor", !tookDamage);
+	}
+
+	/** Unlocks one survival achievement when its completion condition holds. */
+	private void unlockSurvivalAchievement(final String id,
+			final boolean conditionMet) {
+		if (conditionMet)
+			unlockById(id);
 	}
 
 	/**

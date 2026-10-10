@@ -153,6 +153,8 @@ public class GameScreen extends Screen {
 	private boolean levelFinished;
 	/** Checks if a bonus life is received. */
 	private boolean bonusLife;
+	/** Whether the player has taken actual damage during this run. */
+	private boolean tookDamage;
 	/** Dims the screen when the player is hit. */
 	private DamageDimEffect damageDim;
 	/** Glitch effect for low health. */
@@ -196,6 +198,7 @@ public class GameScreen extends Screen {
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
+		this.tookDamage = gameState.hasTakenDamage();
 	}
 
 	/**
@@ -610,6 +613,7 @@ public class GameScreen extends Screen {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+						this.tookDamage = true;
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
 								+ " lives remaining.");
@@ -802,6 +806,7 @@ public class GameScreen extends Screen {
 	 */
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
-				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds);
+				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds,
+				this.tookDamage);
 	}
 }
