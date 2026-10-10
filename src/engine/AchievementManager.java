@@ -248,20 +248,29 @@ public class AchievementManager {
 	 * @param livesRemaining Lives remaining when the run ended.
 	 * @param tookDamage Whether the player was hit during the run.
 	 */
-	public final void recordRunCompleted(final int livesRemaining,
+	public final List<Achievement> recordRunCompleted(final int livesRemaining,
 			final boolean tookDamage) {
+		List<Achievement> unlockedAchievements = new ArrayList<Achievement>();
 		if (livesRemaining <= 0)
-			return;
-		unlockSurvivalAchievement("bronze_survivor", true);
-		unlockSurvivalAchievement("silver_survivor", livesRemaining >= 2);
-		unlockSurvivalAchievement("gold_survivor", !tookDamage);
+			return unlockedAchievements;
+		addUnlockedSurvivalAchievement(unlockedAchievements, "bronze_survivor",
+				true);
+		addUnlockedSurvivalAchievement(unlockedAchievements, "silver_survivor",
+				livesRemaining >= 2);
+		addUnlockedSurvivalAchievement(unlockedAchievements, "gold_survivor",
+				!tookDamage);
+		return unlockedAchievements;
 	}
 
-	/** Unlocks one survival achievement when its completion condition holds. */
-	private void unlockSurvivalAchievement(final String id,
+	/** Adds a newly unlocked survival achievement to the result popup queue. */
+	private void addUnlockedSurvivalAchievement(
+			final List<Achievement> unlockedAchievements, final String id,
 			final boolean conditionMet) {
-		if (conditionMet)
-			unlockById(id);
+		if (!conditionMet)
+			return;
+		Achievement achievement = unlockById(id);
+		if (achievement != null)
+			unlockedAchievements.add(achievement);
 	}
 
 	/**

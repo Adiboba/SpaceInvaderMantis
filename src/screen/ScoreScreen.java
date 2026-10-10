@@ -3,8 +3,11 @@ package screen;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
+import engine.Achievement;
 import engine.Cooldown;
 import engine.Core;
 import engine.GameState;
@@ -26,6 +29,12 @@ public class ScoreScreen extends Screen {
 	private static final int FIRST_CHAR = 65;
 	/** Code of last mayus character. */
 	private static final int LAST_CHAR = 90;
+	/** Duration an achievement unlock popup remains visible. */
+	private static final int ACHIEVEMENT_POPUP_INTERVAL = 3000;
+	/** Time used for an achievement popup to slide in. */
+	private static final int ACHIEVEMENT_POPUP_SLIDE_IN = 250;
+	/** Time used for an achievement popup to slide out. */
+	private static final int ACHIEVEMENT_POPUP_SLIDE_OUT = 350;
 
 	/** Current score. */
 	private int score;
@@ -45,6 +54,12 @@ public class ScoreScreen extends Screen {
 	private int nameCharSelected;
 	/** Time between changes in user selection. */
 	private Cooldown selectionCooldown;
+	/** Newly unlocked achievements waiting to be displayed. */
+	private Queue<Achievement> achievementPopupQueue;
+	/** Achievement currently shown in the popup. */
+	private Achievement unlockedAchievement;
+	/** Time when the current achievement popup started. */
+	private long achievementPopupStartedAt;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -60,6 +75,22 @@ public class ScoreScreen extends Screen {
 	 */
 	public ScoreScreen(final int width, final int height, final int fps,
 			final GameState gameState) {
+		this(width, height, fps, gameState,
+				Collections.<Achievement>emptyList());
+	}
+
+	/**
+	 * Constructor that displays achievements newly unlocked when a run ends.
+	 *
+	 * @param width Screen width.
+	 * @param height Screen height.
+	 * @param fps Frames per second.
+	 * @param gameState Completed run state.
+	 * @param unlockedAchievements Achievements to show in popup order.
+	 */
+	public ScoreScreen(final int width, final int height, final int fps,
+			final GameState gameState,
+			final List<Achievement> unlockedAchievements) {
 		super(width, height, fps);
 
 		this.score = gameState.getScore();
@@ -71,6 +102,8 @@ public class ScoreScreen extends Screen {
 		this.nameCharSelected = 0;
 		this.selectionCooldown = Core.getCooldown(SELECTION_TIME);
 		this.selectionCooldown.reset();
+		this.achievementPopupQueue = new LinkedList<Achievement>();
+		this.achievementPopupQueue.addAll(unlockedAchievements);
 
 		try {
 			this.highScores = Core.getFileManager().loadHighScores();
@@ -101,8 +134,11 @@ public class ScoreScreen extends Screen {
 	protected final void update() {
 		super.update();
 
+		updateAchievementPopup();
 		draw();
-		if (this.inputDelay.checkFinished()) {
+		if (this.unlockedAchievement == null
+				&& this.achievementPopupQueue.isEmpty()
+				&& this.inputDelay.checkFinished()) {
 			if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
 				// Return to main menu.
 				this.returnCode = 1;
@@ -147,6 +183,27 @@ public class ScoreScreen extends Screen {
 
 	}
 
+	/** Advances the run-completion achievement popup queue. */
+	private void updateAchievementPopup() {
+		if (this.unlockedAchievement == null) {
+			startNextAchievementPopup();
+			return;
+		}
+		if (System.currentTimeMillis() - this.achievementPopupStartedAt
+				>= ACHIEVEMENT_POPUP_INTERVAL) {
+			this.unlockedAchievement = null;
+			startNextAchievementPopup();
+		}
+	}
+
+	/** Starts the next queued achievement popup, if any. */
+	private void startNextAchievementPopup() {
+		if (!this.achievementPopupQueue.isEmpty()) {
+			this.unlockedAchievement = this.achievementPopupQueue.remove();
+			this.achievementPopupStartedAt = System.currentTimeMillis();
+		}
+	}
+
 	/**
 	 * Saves the score as a high score.
 	 */
@@ -177,6 +234,11 @@ public class ScoreScreen extends Screen {
 
 		if (this.isNewRecord)
 			drawManager.drawNameInput(this, this.name, this.nameCharSelected);
+		if (this.unlockedAchievement != null)
+			drawManager.drawAchievementUnlocked(this, this.unlockedAchievement,
+					System.currentTimeMillis() - this.achievementPopupStartedAt,
+					ACHIEVEMENT_POPUP_INTERVAL, ACHIEVEMENT_POPUP_SLIDE_IN,
+					ACHIEVEMENT_POPUP_SLIDE_OUT);
 
 		drawManager.completeDrawing(this);
 	}

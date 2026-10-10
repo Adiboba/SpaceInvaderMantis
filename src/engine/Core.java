@@ -138,6 +138,7 @@ public final class Core {
 				break;
 			case 2:
 				// Game & score.
+				List<Achievement> unlockedAchievements = new ArrayList<Achievement>();
 				do {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
@@ -168,7 +169,7 @@ public final class Core {
 						&& gameState.getLevel() <= NUM_LEVELS);
 
 				if (gameState.getLivesRemaining() > 0)
-					getAchievementManager().recordRunCompleted(
+					unlockedAchievements = getAchievementManager().recordRunCompleted(
 							gameState.getLivesRemaining(),
 							gameState.hasTakenDamage());
 
@@ -180,7 +181,8 @@ public final class Core {
 						+ gameState.getLivesRemaining() + " lives remaining, "
 						+ gameState.getBulletsShot() + " bullets shot and "
 						+ gameState.getShipsDestroyed() + " ships destroyed.");
-				currentScreen = new ScoreScreen(width, height, FPS, gameState);
+				currentScreen = new ScoreScreen(width, height, FPS, gameState,
+						unlockedAchievements);
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
 				break;
