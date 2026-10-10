@@ -26,7 +26,8 @@ public class TitleScreen extends Screen {
 	private boolean showingExitConfirm;
 	/** Whether the cursor in the confirmation is on Yes. */
 	private boolean exitConfirmYes;
-
+	/** Whether Escape was held during the previous update. */
+	private boolean escapeWasDown;
 	/**
 	 * Constructor, establishes the properties of the screen.
 	 * 
@@ -44,6 +45,7 @@ public class TitleScreen extends Screen {
 		this.selected = lastSelected;
 		this.selectionCooldown = Core.getCooldown(SELECTION_TIME);
 		this.selectionCooldown.reset();
+		this.escapeWasDown = this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
 	}
 
 	/**
@@ -63,14 +65,41 @@ public class TitleScreen extends Screen {
 	protected final void update() {
 		super.update();
 
+		final boolean escapeDown =
+				this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
+		final boolean escapePressed = escapeDown && !this.escapeWasDown;
+		this.escapeWasDown = escapeDown;
+
 		draw();
-		if (this.selectionCooldown.checkFinished()
-				&& this.inputDelay.checkFinished()) {
-			if (this.showingExitConfirm)
-				updateExitConfirm();
-			else
-				updateMenu();
+
+		if (!this.inputDelay.checkFinished()) {
+			return;
 		}
+
+		if (escapePressed) {
+			if (this.showingExitConfirm) {
+				closeExitConfirm();
+			} else {
+				openExitConfirm();
+			}
+			return;
+		}
+
+		if (this.selectionCooldown.checkFinished()) {
+			if (this.showingExitConfirm) {
+				updateExitConfirm();
+			} else {
+				updateMenu();
+			}
+		}
+
+		if (inputManager.isMouseMoved() && !this.showingExitConfirm) {
+			MenuItem item = drawManager.menuItemAt(this, inputManager.getMouseY());
+			if (item != null) {
+				this.selected = item;
+			}
+		}
+
 	}
 
 	/**
@@ -87,8 +116,17 @@ public class TitleScreen extends Screen {
 			this.selected = this.selected.next();
 			this.selectionCooldown.reset();
 		}
-		if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
+		if (inputManager.isKeyDown(KeyEvent.VK_SPACE)
+				|| inputManager.isKeyDown(KeyEvent.VK_ENTER))
 			confirm();
+
+		if (inputManager.isMousePressed()) {
+			final MenuItem item = drawManager.menuItemAt(this, inputManager.getMouseY());
+			if (item != null) {
+				this.selected = item;
+				confirm();
+			}
+		}
 	}
 
 	/**
@@ -103,11 +141,8 @@ public class TitleScreen extends Screen {
 			this.exitConfirmYes = !this.exitConfirmYes;
 			this.selectionCooldown.reset();
 		}
-		if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
-			closeExitConfirm();
-			return;
-		}
-		if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+		if (inputManager.isKeyDown(KeyEvent.VK_SPACE)
+				|| inputManager.isKeyDown(KeyEvent.VK_ENTER)) {
 			if (this.exitConfirmYes) {
 				this.returnCode = MenuItem.EXIT.getCode();
 				this.isRunning = false;
@@ -133,7 +168,8 @@ public class TitleScreen extends Screen {
 	private String keyHints() {
 		if (this.showingExitConfirm)
 			return "arrows to choose, space ok, esc cancel";
-		return "w+s / arrows to move, space to select";
+
+		return "w+s/arrows move, space select, esc exit";
 	}
 
 	/**
@@ -146,16 +182,16 @@ public class TitleScreen extends Screen {
 	private void confirm() {
 		if (!this.selected.isEnabled())
 			return;
+
 		if (this.selected == MenuItem.EXIT) {
-			this.showingExitConfirm = true;
-			this.selectionCooldown.reset();
+			openExitConfirm();
 			return;
 		}
+
 		lastSelected = this.selected;
 		this.returnCode = this.selected.getCode();
 		this.isRunning = false;
 	}
-
 	/**
 	 * Draws the elements associated with the screen.
 	 */
@@ -171,5 +207,14 @@ public class TitleScreen extends Screen {
 			drawManager.drawExitConfirm(this, this.exitConfirmYes);
 
 		drawManager.completeDrawing(this);
+	}
+
+	/**
+	 * Opens the exit confirmation with No selected.
+	 */
+	private void openExitConfirm() {
+		this.showingExitConfirm = true;
+		this.exitConfirmYes = false;
+		this.selectionCooldown.reset();
 	}
 }
