@@ -223,8 +223,9 @@ public class AchievementsScreen extends Screen {
 
 		DrawManager.SpriteType icon = achievement.getSpriteType();
 
-		if (icon == null)
+		if (icon == null) {
 			icon = DrawManager.SpriteType.FirstFlight;
+		}
 
 		AchievementManager manager = Core.getAchievementManager();
 

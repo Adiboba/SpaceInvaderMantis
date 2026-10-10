@@ -153,8 +153,6 @@ public class GameScreen extends Screen {
 	private boolean levelFinished;
 	/** Checks if a bonus life is received. */
 	private boolean bonusLife;
-	/** Whether the player has taken actual damage during this run. */
-	private boolean tookDamage;
 	/** Dims the screen when the player is hit. */
 	private DamageDimEffect damageDim;
 	/** Glitch effect for low health. */
@@ -198,7 +196,6 @@ public class GameScreen extends Screen {
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
-		this.tookDamage = false;
 	}
 
 	/**
@@ -358,8 +355,6 @@ public class GameScreen extends Screen {
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
-				showUnlockedAchievements(Core.getAchievementManager()
-						.recordFlawlessLevelCompleted(this.tookDamage));
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
 
@@ -615,7 +610,6 @@ public class GameScreen extends Screen {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
-						this.tookDamage = true;
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
 								+ " lives remaining.");
@@ -752,12 +746,6 @@ public class GameScreen extends Screen {
 	private void showUnlockedAchievement(final Achievement achievement) {
 		if (achievement != null)
 			this.achievementPopupQueue.add(achievement);
-	}
-
-	/** Queues every achievement unlocked by one completed level. */
-	private void showUnlockedAchievements(
-			final List<Achievement> unlockedAchievements) {
-		this.achievementPopupQueue.addAll(unlockedAchievements);
 	}
 
 	/** Advances the unlock-popup queue without interrupting gameplay. */

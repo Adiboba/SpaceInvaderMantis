@@ -113,5 +113,4 @@ public class GameState {
 		return pendingDiamonds;
 	}
 
-
 }

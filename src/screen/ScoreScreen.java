@@ -177,6 +177,7 @@ public class ScoreScreen extends Screen {
 
 		if (this.isNewRecord)
 			drawManager.drawNameInput(this, this.name, this.nameCharSelected);
+
 		drawManager.completeDrawing(this);
 	}
 }

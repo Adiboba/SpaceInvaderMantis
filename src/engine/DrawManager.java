@@ -96,16 +96,14 @@ public final class DrawManager {
 		Explosion,
 		/** First Flight achievement icon. */
 		FirstFlight,
-		/** Achievement trophy icon. */
-		Trophy,
 		/** Fleet Master achievement icon. */
 		FleetMaster,
 		/** Weakestship sprite. */
 		Weakestship,
 		/** Infinity Void achievement icon. */
 		InfinityVoid,
-		/** First Boss Kill achievement icon. */
-		BossKill
+        /** First Boss Kill achievement icon. */
+        BossKill
 	};
 
 	/**
@@ -132,11 +130,10 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.EnemyShipSpecial, new boolean[16][7]);
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
 			spriteMap.put(SpriteType.FirstFlight, new boolean[11][8]);
-			spriteMap.put(SpriteType.Trophy, new boolean[11][8]);
 			spriteMap.put(SpriteType.FleetMaster, new boolean[23][23]);
 			spriteMap.put(SpriteType.Weakestship, new boolean[11][11]);
 			spriteMap.put(SpriteType.InfinityVoid, new boolean[11][11]);
-			spriteMap.put(SpriteType.BossKill, new boolean[11][11]);
+            spriteMap.put(SpriteType.BossKill, new boolean[11][11]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
@@ -1221,13 +1218,13 @@ public final class DrawManager {
 		if (effect != null)
 			effect.draw(backBufferGraphics, screen.getWidth(),
 					screen.getHeight());
-	}
+	}                                      
 
-	/**
+	/**                                     
 	 * Draws the low-health glitch effect.
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 *Any further inquiries please contact us.
-	 *
+	 * 
 	 * @param screen Screen to draw on.
 	 * @param effect Glitch effect to draw.
 	 */
