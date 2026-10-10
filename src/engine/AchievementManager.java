@@ -21,6 +21,10 @@ public class AchievementManager {
 	private static final int THREE_KILLS_TARGET = 3;
 	/** Number of lifetime kills required for Bronze Hunter. */
 	private static final int BRONZE_HUNTER_KILLS_TARGET = 100;
+	/** Number of lifetime kills required for Silver Hunter. */
+	private static final int SILVER_HUNTER_KILLS_TARGET = 500;
+	/** Number of lifetime kills required for Gold Hunter. */
+	private static final int GOLD_HUNTER_KILLS_TARGET = 1000;
 	/** The id we use for the weakest ship. */
 	public static final String STARTER_SHIP_ID = "starter";
 	/** Level that must be cleared to unlock Endless Mode. */
@@ -63,6 +67,8 @@ public class AchievementManager {
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
 		addBronzeHunterAchievement();
+		addSilverHunterAchievement();
+		addGoldHunterAchievement();
 	}
 
 	/** Adds the First Flight achievement. */
@@ -124,6 +130,24 @@ public class AchievementManager {
 				BRONZE_HUNTER_KILLS_TARGET, SpriteType.Trophy,
 				this.playerProfile.isAchievementUnlocked("bronze_hunter"),
 				new Color(205, 127, 50)));
+	}
+
+	/** Adds the Silver Hunter lifetime-kill tier achievement. */
+	private void addSilverHunterAchievement() {
+		addTierAchievement(new Achievement("silver_hunter", "Silver Hunter",
+				"Defeat " + SILVER_HUNTER_KILLS_TARGET + " enemies.",
+				SILVER_HUNTER_KILLS_TARGET, SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("silver_hunter"),
+				new Color(192, 192, 192)));
+	}
+
+	/** Adds the Gold Hunter lifetime-kill tier achievement. */
+	private void addGoldHunterAchievement() {
+		addTierAchievement(new Achievement("gold_hunter", "Gold Hunter",
+				"Defeat " + GOLD_HUNTER_KILLS_TARGET + " enemies.",
+				GOLD_HUNTER_KILLS_TARGET, SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("gold_hunter"),
+				new Color(255, 215, 0)));
 	}
 
 	/**
