@@ -17,6 +17,8 @@ import screen.Screen;
 import entity.Coin;
 import entity.Entity;
 import entity.Ship;
+import item.ItemAPI;
+import item.ItemSystem;
 
 /**
  * Manages screen drawing.
@@ -40,6 +42,15 @@ public final class DrawManager {
 	private static Graphics backBufferGraphics;
 	/** Buffer image. */
 	private static BufferedImage backBuffer;
+	/** Top of the item panel, right below the HUD line (Team CS). */
+	private static final int ITEM_PANEL_TOP = 43;
+	/** Size of one item slot box in the item panel. */
+	private static final int ITEM_SLOT_WIDTH = 52;
+	private static final int ITEM_SLOT_HEIGHT = 16;
+	/** Item notice baseline, measured up from the bottom of the screen. */
+	private static final int ITEM_NOTICE_BOTTOM_OFFSET = 60;
+	/** The shield bubble blinks during this many last milliseconds. */
+	private static final long SHIELD_BLINK_MILLIS = 2000;
 	/** Normal sized font. */
 	private static Font fontRegular;
 	/** Normal sized font properties. */
@@ -48,6 +59,11 @@ public final class DrawManager {
 	private static Font fontBig;
 	/** Big sized font properties. */
 	private static FontMetrics fontBigMetrics;
+
+		/** Font used for the highlighted menu item. */
+	private static Font fontSelected;
+	/** Highlighted menu item font properties. */
+	private static FontMetrics fontSelectedMetrics;
 
 	/** Sprite types mapped to their images. */
 	private static Map<SpriteType, boolean[][]> spriteMap;
@@ -119,6 +135,7 @@ public final class DrawManager {
 			// Font loading.
 			fontRegular = fileManager.loadFont(14f);
 			fontBig = fileManager.loadFont(24f);
+			fontSelected = fontRegular.deriveFont(17f);
 			logger.info("Finished loading the fonts.");
 
 		} catch (IOException e) {
@@ -173,6 +190,7 @@ public final class DrawManager {
 
 		fontRegularMetrics = backBufferGraphics.getFontMetrics(fontRegular);
 		fontBigMetrics = backBufferGraphics.getFontMetrics(fontBig);
+				fontSelectedMetrics = backBufferGraphics.getFontMetrics(fontSelected);
 
 		// drawBorders(screen);
 		// drawGrid(screen);
@@ -272,6 +290,150 @@ public final class DrawManager {
 		backBufferGraphics.setColor(coin.getColor());
 		backBufferGraphics.fillOval(positionX, positionY, coin.getWidth(),
 				coin.getHeight());
+	}
+
+	/**
+	 * Draws the item drops on the field (Team CS - Item System). Drops have
+	 * no entry in the shared sprite file yet, so the item system draws
+	 * placeholder shapes on the back buffer.
+	 *
+	 * @param items
+	 *            Item system of the current run.
+	 */
+	public void drawItemDrops(final ItemSystem items) {
+		backBufferGraphics.setFont(fontRegular);
+		items.drawDrops(backBufferGraphics);
+	}
+
+	/**
+	 * Draws the shield item around the player ship while it is active
+	 * (Team CS - Item System): a cyan bubble that blinks during its last
+	 * seconds.
+	 *
+	 * @param ship
+	 *            Player ship.
+	 * @param items
+	 *            Item system of the current run.
+	 */
+	public void drawItemShield(final Entity ship, final ItemSystem items) {
+		ItemAPI.EffectView shield = items.shield();
+		if (shield == null)
+			return;
+		long remaining = shield.remainingMillis == null ? Long.MAX_VALUE
+				: shield.remainingMillis;
+		if (remaining < SHIELD_BLINK_MILLIS
+				&& (System.currentTimeMillis() / 150) % 2 == 0)
+			return;
+		int padding = 6;
+		int x = ship.getPositionX() - padding;
+		int y = ship.getPositionY() - padding;
+		int width = ship.getWidth() + padding * 2;
+		int height = ship.getHeight() + padding * 2;
+		Color color = ItemSystem.colorOf(shield.item.effectKind);
+		backBufferGraphics.setColor(new Color(color.getRed(),
+				color.getGreen(), color.getBlue(), 60));
+		backBufferGraphics.fillOval(x, y, width, height);
+		backBufferGraphics.setColor(color);
+		backBufferGraphics.drawOval(x, y, width, height);
+	}
+
+	/**
+	 * Draws the item panel right below the HUD line (Team CS - Item System):
+	 * inventory slots on the left, each with the number key that uses it,
+	 * and running effects on the right with stacks or seconds left. The
+	 * latest item notice is shown above the player ship.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param items
+	 *            Item system of the current run.
+	 */
+	public void drawItemHud(final Screen screen, final ItemSystem items) {
+		ItemAPI.View view = items.api().getView();
+		Font font = fontRegular.deriveFont(12f);
+		FontMetrics metrics = backBufferGraphics.getFontMetrics(font);
+		backBufferGraphics.setFont(font);
+		int baseline = ITEM_PANEL_TOP + ITEM_SLOT_HEIGHT - 4;
+
+		// Slots: "1 [Shield]" ... an empty slot is a dark box.
+		int x = 6;
+		for (int i = 0; i < view.slots.size(); i++) {
+			ItemAPI.ItemInfo item = view.slots.get(i);
+			backBufferGraphics.setColor(Color.GRAY);
+			backBufferGraphics.drawString(Integer.toString(i + 1), x, baseline);
+			x += metrics.stringWidth("0") + 3;
+			backBufferGraphics.setColor(item == null ? Color.DARK_GRAY
+					: ItemSystem.colorOf(item.effectKind));
+			backBufferGraphics.drawRect(x, ITEM_PANEL_TOP, ITEM_SLOT_WIDTH,
+					ITEM_SLOT_HEIGHT);
+			if (item != null)
+				backBufferGraphics.drawString(item.displayName, x + 4, baseline);
+			x += ITEM_SLOT_WIDTH + 8;
+		}
+
+		// Effects, right-aligned: "RF x2  SH 8s".
+		int right = screen.getWidth() - 6;
+		for (int i = view.effects.size() - 1; i >= 0; i--) {
+			ItemAPI.EffectView effect = view.effects.get(i);
+			String label = shortItemName(effect.item.effectKind);
+			if (effect.stacks != null)
+				label += " x" + effect.stacks;
+			else if (effect.remainingMillis != null)
+				label += " " + (effect.remainingMillis + 999) / 1000 + "s";
+			right -= metrics.stringWidth(label);
+			backBufferGraphics.setColor(ItemSystem
+					.colorOf(effect.item.effectKind));
+			backBufferGraphics.drawString(label, right, baseline);
+			right -= 10;
+		}
+
+		String notice = items.getNotice();
+		if (notice != null) {
+			backBufferGraphics.setColor(Color.YELLOW);
+			drawCenteredRegularString(screen, notice, screen.getHeight()
+					- ITEM_NOTICE_BOTTOM_OFFSET);
+		}
+	}
+
+	/**
+	 * Explains the items while the level countdown runs (Team CS - Item
+	 * System).
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param items
+	 *            Item system of the current run.
+	 */
+	public void drawItemHint(final Screen screen, final ItemSystem items) {
+		int slots = items.api().getView().slots.size();
+		backBufferGraphics.setColor(Color.GRAY);
+		drawCenteredRegularString(screen, "Catch item drops with your ship",
+				screen.getHeight() * 2 / 3);
+		drawCenteredRegularString(screen, "Keys 1-" + slots
+				+ " use stored items", screen.getHeight() * 2 / 3
+				+ fontRegularMetrics.getHeight());
+	}
+
+	/**
+	 * Short label for a running item effect in the HUD.
+	 *
+	 * @param kind
+	 *            Effect kind.
+	 * @return Two-letter label.
+	 */
+	private static String shortItemName(final ItemAPI.EffectKind kind) {
+		switch (kind) {
+		case RAPID_FIRE:
+			return "RF";
+		case BULLET_SPEED:
+			return "BS";
+		case SHIELD:
+			return "SH";
+		case FREEZE:
+			return "FZ";
+		default:
+			return kind.name();
+		}
 	}
 
 	/**
@@ -456,14 +618,21 @@ public final class DrawManager {
 	 */
 	public void drawMenu(final Screen screen, final MenuItem selected) {
 		for (MenuItem item : MenuItem.values()) {
-			if (item == selected)
+			int baseline = menuItemBaseline(screen, item.ordinal());
+
+			if (item == selected) {
+				String text = "> " + item.getTitle() + " <";
 				backBufferGraphics.setColor(Color.GREEN);
-			else if (!item.isEnabled())
-				backBufferGraphics.setColor(Color.DARK_GRAY);
-			else
-				backBufferGraphics.setColor(Color.WHITE);
-			drawCenteredRegularString(screen, item.getTitle(),
-					menuItemBaseline(screen, item.ordinal()));
+				backBufferGraphics.setFont(fontSelected);
+				backBufferGraphics.drawString(text, screen.getWidth() / 2
+						- fontSelectedMetrics.stringWidth(text) / 2, baseline);
+			} else {
+				if (!item.isEnabled())
+					backBufferGraphics.setColor(Color.DARK_GRAY);
+				else
+					backBufferGraphics.setColor(Color.WHITE);
+				drawCenteredRegularString(screen, item.getTitle(), baseline);
+			}
 		}
 	}
 
@@ -779,24 +948,6 @@ public final class DrawManager {
 	}
 
 	/**
-	 * Draws high score screen title and instructions.
-	 * 
-	 * @param screen
-	 *            Screen to draw on.
-	 */
-	public void drawHighScoreMenu(final Screen screen) {
-		String highScoreString = "High Scores";
-		String instructionsString = "Press Space to return";
-
-		backBufferGraphics.setColor(Color.GREEN);
-		drawCenteredBigString(screen, highScoreString, screen.getHeight() / 8);
-
-		backBufferGraphics.setColor(Color.GRAY);
-		drawCenteredRegularString(screen, instructionsString,
-				screen.getHeight() / 5);
-	}
-
-	/**
 	 * Draws high scores.
 	 * 
 	 * @param screen
@@ -1027,9 +1178,9 @@ public final class DrawManager {
 		if (effect != null)
 			effect.draw(backBufferGraphics, screen.getWidth(),
 					screen.getHeight());
-	}                                          // <- ADD
+	}                                      
 
-	/**                                        // <- ADD
+	/**                                     
 	 * Draws the low-health glitch effect.
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 *Any further inquiries please contact us.
