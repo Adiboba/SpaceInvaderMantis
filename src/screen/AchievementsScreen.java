@@ -178,10 +178,10 @@ public class AchievementsScreen extends Screen {
 	 * @param isSelected  Whether this row is currently highlighted.
 	 */
 	private void drawAchievement(final Achievement achievement,
-			final int positionY, final boolean isSelected) {
+								 final int positionY, final boolean isSelected) {
 		Color trophyColor;
 		if (achievement.isUnlocked())
-			trophyColor = UNLOCKED;
+			trophyColor = achievement.getIconColor();
 		else
 			trophyColor = LOCKED;
 		Color nameColor;
@@ -192,19 +192,32 @@ public class AchievementsScreen extends Screen {
 		DrawManager.SpriteType icon = achievement.getSpriteType();
 		if (icon == null)
 			icon = DrawManager.SpriteType.FirstFlight;
+
+		boolean needsKills = achievement.getRequiredEnemyKills() > 0;
+
 		this.drawManager.drawSprite(icon, TROPHY_X, positionY, trophyColor);
 		this.drawManager.drawRegularString(achievement.getName(),
 				TEXT_X, positionY + 8, nameColor);
-		this.drawManager.drawRegularString("Unlock: defeat "
-				+ achievement.getRequiredEnemyKills() + " enemies.", TEXT_X,
+
+		String unlockText;
+		if (needsKills)
+			unlockText = "Unlock: defeat "
+					+ achievement.getRequiredEnemyKills() + " enemies.";
+		else
+			unlockText = achievement.getDescription();
+		this.drawManager.drawRegularString(unlockText, TEXT_X,
 				positionY + 24, MUTED);
+
 		if (achievement.isUnlocked())
 			this.drawManager.drawRegularString("UNLOCKED",
 					STATUS_X, positionY + 8, SELECTED);
-		else
+		else if (needsKills)
 			this.drawManager.drawRegularString(
-					this.totalKills + "/" +
-							achievement.getRequiredEnemyKills(),
+					this.totalKills + "/"
+							+ achievement.getRequiredEnemyKills(),
+					STATUS_X, positionY + 8, MUTED);
+		else
+			this.drawManager.drawRegularString("LOCKED",
 					STATUS_X, positionY + 8, MUTED);
 	}
 }
