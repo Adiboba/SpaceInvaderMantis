@@ -107,7 +107,9 @@ public final class DrawManager {
 		/** First Boss Kill achievement icon. */
 		BossKill,
 		/** Accuracy target achievement icon. */
-		Accuracytarget
+		Accuracytarget,
+		/** Enemies killed achievement icon. */
+		Hunter
 	};
 
 	/**
@@ -140,6 +142,8 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.InfinityVoid, new boolean[11][11]);
 			spriteMap.put(SpriteType.BossKill, new boolean[11][11]);
 			spriteMap.put(SpriteType.Accuracytarget, new boolean[11][11]);
+			spriteMap.put(SpriteType.Hunter, new boolean[13][12]);
+
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");

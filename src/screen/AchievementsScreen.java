@@ -69,6 +69,11 @@ public class AchievementsScreen extends Screen {
 	private static final String[] PAGE_NAMES = {"Normal", "Tier"};
 
 	/**
+	 * Scroll function
+	 */
+	private int scrollOffset;
+
+	/**
 	 * Achievements on each page, in page order.
 	 */
 	private List<List<Achievement>> pages;
@@ -108,6 +113,7 @@ public class AchievementsScreen extends Screen {
 		this.totalKills = manager.getTotalEnemiesKilled();
 		this.currentPage = 0;
 		this.selected = 0;
+		this.scrollOffset = 0;
 		this.selectionCooldown = Core.getCooldown(SELECTION_INTERVAL);
 		this.selectionCooldown.reset();
 	}
@@ -141,7 +147,8 @@ public class AchievementsScreen extends Screen {
 			}
 			if (this.inputManager.isKeyDown(KeyEvent.VK_DOWN)
 					|| this.inputManager.isKeyDown(KeyEvent.VK_S)) {
-				if (this.selected < getRowCount() - 1) {
+				if (this.selected
+						< this.pages.get(this.currentPage).size() - 1) {
 					this.selected++;
 					this.selectionCooldown.reset();
 				}
@@ -151,6 +158,7 @@ public class AchievementsScreen extends Screen {
 				if (this.currentPage > 0) {
 					this.currentPage--;
 					this.selected = 0;
+					this.scrollOffset = 0;
 					this.selectionCooldown.reset();
 				}
 			}
@@ -159,8 +167,16 @@ public class AchievementsScreen extends Screen {
 				if (this.currentPage < this.pages.size() - 1) {
 					this.currentPage++;
 					this.selected = 0;
+					this.scrollOffset = 0;
 					this.selectionCooldown.reset();
 				}
+			}
+			int visibleRows = AchievementManager.ACHIEVEMENTS_PER_PAGE;
+
+			if (this.selected < this.scrollOffset) {
+				this.scrollOffset = this.selected;
+			} else if (this.selected >= this.scrollOffset + visibleRows) {
+				this.scrollOffset = this.selected - visibleRows + 1;
 			}
 		}
 		if (this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE)
@@ -174,7 +190,11 @@ public class AchievementsScreen extends Screen {
 	 * {@link AchievementManager#ACHIEVEMENTS_PER_PAGE}.
 	 */
 	private int getRowCount() {
-		return Math.min(this.pages.get(this.currentPage).size(),
+		int remaining = this.pages.get(this.currentPage).size()
+				- this.scrollOffset;
+
+		return Math.min(
+				remaining,
 				AchievementManager.ACHIEVEMENTS_PER_PAGE);
 	}
 
@@ -196,10 +216,25 @@ public class AchievementsScreen extends Screen {
 			this.drawManager.drawRegularString("No achievements yet.",
 					TEXT_X, FIRST_ROW_Y + 24, MUTED);
 		} else {
-			for (int i = 0; i < getRowCount(); i++)
-				drawAchievement(page.get(i),
-						FIRST_ROW_Y + i * ROW_SPACING, i == this.selected);
+			for (int i = 0; i < getRowCount(); i++) {
+				int achievementIndex = this.scrollOffset + i;
+
+				drawAchievement(
+						page.get(achievementIndex),
+						FIRST_ROW_Y + i * ROW_SPACING,
+						achievementIndex == this.selected);
+			}
+
 		}
+		if (this.scrollOffset + getRowCount()
+				< this.pages.get(this.currentPage).size()) {
+			this.drawManager.drawRegularString(
+					" ------ SCROLL DOWN FOR MORE ------",
+					TEXT_X,
+					430,
+					MUTED);
+		}
+
 
 		this.drawManager.drawKeyHints(this,
 				"left right page, up down move, esc back");
@@ -218,6 +253,10 @@ public class AchievementsScreen extends Screen {
 
 		Color trophyColor = achievement.isUnlocked()
 				? achievement.getIconColor() : LOCKED;
+
+		if (achievement.getSpriteType() == DrawManager.SpriteType.FleetMaster){
+			trophyColor = Color.white;
+		}
 
 		Color nameColor = isSelected ? SELECTED : UNSELECTED;
 

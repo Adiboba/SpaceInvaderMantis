@@ -15,7 +15,7 @@ import engine.DrawManager.SpriteType;
 public class AchievementManager {
 
 	/** Most achievements a single page of the achievements screen shows. */
-	public static final int ACHIEVEMENTS_PER_PAGE = 11;
+	public static final int ACHIEVEMENTS_PER_PAGE = 6;
 
 	/** Number of player kills required for First Flight. */
 	private static final int THREE_KILLS_TARGET = 3;
@@ -143,7 +143,7 @@ public class AchievementManager {
 	private void addBronzeHunterAchievement() {
 		addTierAchievement(new Achievement("bronze_hunter", "Bronze Hunter",
 				"Defeat " + BRONZE_HUNTER_KILLS_TARGET + " enemies.",
-				BRONZE_HUNTER_KILLS_TARGET, SpriteType.Trophy,
+				BRONZE_HUNTER_KILLS_TARGET, SpriteType.Hunter,
 				this.playerProfile.isAchievementUnlocked("bronze_hunter"),
 				new Color(205, 127, 50)));
 	}
@@ -152,7 +152,7 @@ public class AchievementManager {
 	private void addSilverHunterAchievement() {
 		addTierAchievement(new Achievement("silver_hunter", "Silver Hunter",
 				"Defeat " + SILVER_HUNTER_KILLS_TARGET + " enemies.",
-				SILVER_HUNTER_KILLS_TARGET, SpriteType.Trophy,
+				SILVER_HUNTER_KILLS_TARGET, SpriteType.Hunter,
 				this.playerProfile.isAchievementUnlocked("silver_hunter"),
 				new Color(192, 192, 192)));
 	}
@@ -161,7 +161,7 @@ public class AchievementManager {
 	private void addGoldHunterAchievement() {
 		addTierAchievement(new Achievement("gold_hunter", "Gold Hunter",
 				"Defeat " + GOLD_HUNTER_KILLS_TARGET + " enemies.",
-				GOLD_HUNTER_KILLS_TARGET, SpriteType.Trophy,
+				GOLD_HUNTER_KILLS_TARGET, SpriteType.Hunter,
 				this.playerProfile.isAchievementUnlocked("gold_hunter"),
 				new Color(255, 215, 0)));
 	}
@@ -209,7 +209,7 @@ public class AchievementManager {
 	private void addAccuracyAchievement(final String id, final String name,
 			final int target, final Color color) {
 		addTierAchievement(new Achievement(id, name,
-				"Finish a run with at least " + target + "% accuracy and clear "
+				"Finish with " + target + "% accuracy on "
 						+ ACCURACY_LEVELS_TARGET + " levels.", target,
 				SpriteType.Accuracytarget,
 				this.playerProfile.isAchievementUnlocked(id),
@@ -246,8 +246,8 @@ public class AchievementManager {
 						   final Achievement achievement, final String pageName) {
 		if (page.size() >= ACHIEVEMENTS_PER_PAGE) {
 			Core.getLogger().warning("The " + pageName + " achievement page "
-					+ "is full, skipping " + achievement.getId() + ".");
-			return;
+					+ "has more than " + ACHIEVEMENTS_PER_PAGE
+					+ " achievements.");
 		}
 		page.add(achievement);
 	}

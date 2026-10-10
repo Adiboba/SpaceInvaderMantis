@@ -17,6 +17,7 @@ public class PlayerProfile {
 	private Set<String> level10CompletedShips;
 	/** Total levels cleared without the player taking damage. */
 	private int flawlessLevelsCleared;
+	private int totalItemsUsed;
 
 	/** Creates an empty player profile. */
 	public PlayerProfile() {
@@ -50,6 +51,7 @@ public class PlayerProfile {
 		this.totalEnemiesKilled = totalEnemiesKilled;
 		this.unlockedAchievements = new HashSet<String>(unlockedAchievements);
 		this.flawlessLevelsCleared = Math.max(0, flawlessLevelsCleared);
+		this.totalItemsUsed = Math.max(0, totalItemsUsed);
 	}
 
 	/** Records a distinct ship; repeating a clear does not add progress. */
