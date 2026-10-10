@@ -19,6 +19,8 @@ public class AchievementManager {
 
 	/** Number of player kills required for First Flight. */
 	private static final int THREE_KILLS_TARGET = 3;
+	/** Number of lifetime kills required for Bronze Hunter. */
+	private static final int BRONZE_HUNTER_KILLS_TARGET = 100;
 	/** The id we use for the weakest ship. */
 	public static final String STARTER_SHIP_ID = "starter";
 	/** Level that must be cleared to unlock Endless Mode. */
@@ -60,6 +62,7 @@ public class AchievementManager {
 
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
+		addBronzeHunterAchievement();
 	}
 
 	/** Adds the First Flight achievement. */
@@ -112,6 +115,15 @@ public class AchievementManager {
 				this.playerProfile.isAchievementUnlocked(LEVEL10_ALL_SHIPS_ID),
 				Requirement.LEVEL10_ALL_SHIPS);
 		addNormalAchievement(this.level10AllShips);
+	}
+
+	/** Adds the Bronze Hunter lifetime-kill tier achievement. */
+	private void addBronzeHunterAchievement() {
+		addTierAchievement(new Achievement("bronze_hunter", "Bronze Hunter",
+				"Defeat " + BRONZE_HUNTER_KILLS_TARGET + " enemies.",
+				BRONZE_HUNTER_KILLS_TARGET, SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("bronze_hunter"),
+				new Color(205, 127, 50)));
 	}
 
 	/**
