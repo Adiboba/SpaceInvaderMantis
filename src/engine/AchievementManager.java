@@ -15,7 +15,7 @@ import engine.DrawManager.SpriteType;
 public class AchievementManager {
 
 	/** Most achievements a single page of the achievements screen shows. */
-	public static final int ACHIEVEMENTS_PER_PAGE = 6;
+	public static final int ACHIEVEMENTS_PER_PAGE = 11;
 
 	/** Number of player kills required for First Flight. */
 	private static final int THREE_KILLS_TARGET = 3;
@@ -31,6 +31,12 @@ public class AchievementManager {
 	private static final int SILVER_SURVIVOR_TARGET = 4;
 	/** Flawless levels required for Gold Survivor. */
 	private static final int GOLD_SURVIVOR_TARGET = 10;
+	/** Accuracy thresholds for the tiered accuracy achievements. */
+	private static final int ACCURACY_60_TARGET = 60;
+	private static final int ACCURACY_90_TARGET = 90;
+	private static final int ACCURACY_100_TARGET = 100;
+	/** Levels that must be cleared in the run for accuracy achievements. */
+	private static final int ACCURACY_LEVELS_TARGET = 3;
 	/** The id we use for the weakest ship. */
 	public static final String STARTER_SHIP_ID = "starter";
 	/** Level that must be cleared to unlock Endless Mode. */
@@ -78,6 +84,7 @@ public class AchievementManager {
 		addBronzeSurvivorAchievement();
 		addSilverSurvivorAchievement();
 		addGoldSurvivorAchievement();
+		addAccuracyAchievements();
 	}
 
 	/** Adds the First Flight achievement. */
@@ -188,6 +195,27 @@ public class AchievementManager {
 				Requirement.FLAWLESS_LEVELS, new Color(255, 215, 0)));
 	}
 
+	/** Adds the 60%, 90%, and 100% accuracy achievements. */
+	private void addAccuracyAchievements() {
+		addAccuracyAchievement("accuracy_60", "Bronze Sharpshooter",
+				ACCURACY_60_TARGET, Color.GREEN);
+		addAccuracyAchievement("accuracy_90", "Silver Sharpshooter",
+				ACCURACY_90_TARGET, Color.YELLOW);
+		addAccuracyAchievement("accuracy_100", "Gold Sharpshooter",
+				ACCURACY_100_TARGET, Color.RED);
+	}
+
+	/** Adds one accuracy achievement to the tier page. */
+	private void addAccuracyAchievement(final String id, final String name,
+			final int target, final Color color) {
+		addTierAchievement(new Achievement(id, name,
+				"Finish a run with at least " + target + "% accuracy and clear "
+						+ ACCURACY_LEVELS_TARGET + " levels.", target,
+				SpriteType.Accuracytarget,
+				this.playerProfile.isAchievementUnlocked(id),
+				Requirement.ACCURACY, color));
+	}
+
 	/**
 	 * Adds an achievement to page 1 (normal achievements).
 	 *
@@ -247,6 +275,36 @@ public class AchievementManager {
 
 		saveProfile();
 		return unlockedAchievement;
+	}
+
+	/**
+	 * Records final run accuracy and unlocks every achieved accuracy tier.
+	 *
+	 * @param bulletsShot Number of shots fired in the run.
+	 * @param shipsDestroyed Number of enemy ships destroyed in the run.
+	 * @param levelsCompleted Number of levels cleared alive in the run.
+	 * @return The highest newly unlocked accuracy achievement, or null.
+	 */
+	public final Achievement recordAccuracy(final int bulletsShot,
+			final int shipsDestroyed, final int levelsCompleted) {
+		if (bulletsShot <= 0 || shipsDestroyed < 0
+				|| levelsCompleted < ACCURACY_LEVELS_TARGET)
+			return null;
+
+		float accuracy = 100.0f * shipsDestroyed / bulletsShot;
+		Achievement highestUnlocked = null;
+		for (Achievement achievement : this.tierAchievements) {
+			if (achievement.getRequirement() != Requirement.ACCURACY
+					|| achievement.isUnlocked()
+					|| accuracy < achievement.getRequiredEnemyKills())
+				continue;
+			achievement.unlock();
+			this.playerProfile.unlockAchievement(achievement.getId());
+			highestUnlocked = achievement;
+		}
+		if (highestUnlocked != null)
+			saveProfile();
+		return highestUnlocked;
 	}
 
 	/**
@@ -337,6 +395,8 @@ public class AchievementManager {
 
 	/** @return Requirement text suitable for the achievement screen. */
 	public final String getRequirementText(final Achievement achievement) {
+		if (achievement.getRequirement() == Requirement.ACCURACY)
+			return achievement.getDescription();
 		if (achievement.getRequirement() == Requirement.LEVEL10_ALL_SHIPS
 				|| achievement.getRequirement() == Requirement.FLAWLESS_LEVELS
 				|| achievement.getRequiredEnemyKills() <= 0)
@@ -358,6 +418,8 @@ public class AchievementManager {
 		if (achievement.getRequirement() == Requirement.FLAWLESS_LEVELS)
 			return this.playerProfile.getFlawlessLevelsCleared() + "/"
 					+ achievement.getRequiredEnemyKills();
+		if (achievement.getRequirement() == Requirement.ACCURACY)
+			return achievement.getRequiredEnemyKills() + "%";
 		if (achievement.getRequiredEnemyKills() <= 0)
 			return "LOCKED";
 		return getTotalEnemiesKilled() + "/" + achievement.getRequiredEnemyKills();

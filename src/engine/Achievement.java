@@ -8,7 +8,9 @@ import engine.DrawManager.SpriteType;
 public class Achievement {
 
 	/** Events that can unlock an achievement. */
-	public enum Requirement { ENEMY_KILLS, LEVEL10_ALL_SHIPS, FLAWLESS_LEVELS }
+	public enum Requirement {
+		ENEMY_KILLS, LEVEL10_ALL_SHIPS, FLAWLESS_LEVELS, ACCURACY
+	}
 	private final Requirement requirement;
 
 	/** Persistent achievement identifier. */

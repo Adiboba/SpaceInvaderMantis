@@ -21,6 +21,8 @@ public class GameState {
 	/** Diamonds earned so far this run but not yet cashed out (GoG -
 	 * Currency System). Lost if the run ends in death. */
 	private int pendingDiamonds;
+	/** Levels cleared alive during the current run. */
+	private int levelsCompletedRun;
 
 	/**
 	 * Constructor.
@@ -63,12 +65,32 @@ public class GameState {
 	public GameState(final int level, final int score,
 			final int livesRemaining, final int bulletsShot,
 			final int shipsDestroyed, final int pendingDiamonds) {
+		this(level, score, livesRemaining, bulletsShot, shipsDestroyed,
+				pendingDiamonds, 0);
+	}
+
+	/**
+	 * Constructor that also carries run progress needed by achievements.
+	 *
+	 * @param level Current level.
+	 * @param score Current score.
+	 * @param livesRemaining Lives remaining.
+	 * @param bulletsShot Shots fired during the run.
+	 * @param shipsDestroyed Ships destroyed during the run.
+	 * @param pendingDiamonds Diamonds earned but not yet cashed out.
+	 * @param levelsCompletedRun Levels cleared alive during this run.
+	 */
+	public GameState(final int level, final int score,
+			final int livesRemaining, final int bulletsShot,
+			final int shipsDestroyed, final int pendingDiamonds,
+			final int levelsCompletedRun) {
 		this.level = level;
 		this.score = score;
 		this.livesRemaining = livesRemaining;
 		this.bulletsShot = bulletsShot;
 		this.shipsDestroyed = shipsDestroyed;
 		this.pendingDiamonds = Math.max(0, pendingDiamonds);
+		this.levelsCompletedRun = Math.max(0, levelsCompletedRun);
 	}
 
 	/**
@@ -113,5 +135,11 @@ public class GameState {
 		return pendingDiamonds;
 	}
 
+	/**
+	 * @return Levels cleared alive during this run.
+	 */
+	public final int getLevelsCompletedRun() {
+		return levelsCompletedRun;
+	}
 
 }

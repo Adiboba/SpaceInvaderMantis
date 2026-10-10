@@ -162,6 +162,8 @@ public class GameScreen extends Screen {
 	/** Diamonds earned this run but not yet cashed out; lost on death,
 	 * banked into DiamondManager only when the player cashes out. */
 	private int pendingDiamonds;
+	/** Levels cleared alive during the current run. */
+	private int levelsCompletedRun;
 	/** Item system of this run (Team CS). Kept across levels by ItemSystem. */
 	private ItemSystem items;
 	/** Item slot keys (1-9) held last frame, so holding a key uses it once. */
@@ -198,6 +200,7 @@ public class GameScreen extends Screen {
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
+		this.levelsCompletedRun = gameState.getLevelsCompletedRun();
 		this.tookDamage = false;
 	}
 
@@ -356,6 +359,7 @@ public class GameScreen extends Screen {
 			// until cashed out (see engine.DiamondManager), and coins still
 			// falling are collected so the last kills' drops aren't lost.
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
+				this.levelsCompletedRun++;
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
 				showUnlockedAchievements(Core.getAchievementManager()
@@ -814,6 +818,7 @@ public class GameScreen extends Screen {
 	 */
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
-				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds);
+				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds,
+				this.levelsCompletedRun);
 	}
 }

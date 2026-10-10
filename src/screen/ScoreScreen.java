@@ -66,6 +66,8 @@ public class ScoreScreen extends Screen {
 		this.livesRemaining = gameState.getLivesRemaining();
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
+		Core.getAchievementManager().recordAccuracy(this.bulletsShot,
+				this.shipsDestroyed, gameState.getLevelsCompletedRun());
 		this.isNewRecord = false;
 		this.name = "AAA".toCharArray();
 		this.nameCharSelected = 0;

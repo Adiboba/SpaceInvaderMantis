@@ -159,7 +159,8 @@ public final class Core {
 							gameState.getLivesRemaining(),
 							gameState.getBulletsShot(),
 							gameState.getShipsDestroyed(),
-							gameState.getPendingDiamonds());
+							gameState.getPendingDiamonds(),
+							gameState.getLevelsCompletedRun());
 
 					gameState = offerCashOut(gameState, width, height);
 
@@ -269,7 +270,8 @@ public final class Core {
 		// Diamonds were banked by the screen itself.
 		return new GameState(NUM_LEVELS + 1, gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
-				gameState.getShipsDestroyed(), 0);
+				gameState.getShipsDestroyed(), 0,
+				gameState.getLevelsCompletedRun());
 	}
 
 	/**
@@ -293,7 +295,8 @@ public final class Core {
 		}
 		return new GameState(gameState.getLevel(), gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
-				gameState.getShipsDestroyed(), 0);
+				gameState.getShipsDestroyed(), 0,
+				gameState.getLevelsCompletedRun());
 	}
 
 	/**
