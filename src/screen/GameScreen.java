@@ -198,7 +198,7 @@ public class GameScreen extends Screen {
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
-		this.tookDamage = gameState.hasTakenDamage();
+		this.tookDamage = false;
 	}
 
 	/**
@@ -358,6 +358,8 @@ public class GameScreen extends Screen {
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
+				showUnlockedAchievements(Core.getAchievementManager()
+						.recordFlawlessLevelCompleted(this.tookDamage));
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
 
@@ -752,6 +754,12 @@ public class GameScreen extends Screen {
 			this.achievementPopupQueue.add(achievement);
 	}
 
+	/** Queues every achievement unlocked by one completed level. */
+	private void showUnlockedAchievements(
+			final List<Achievement> unlockedAchievements) {
+		this.achievementPopupQueue.addAll(unlockedAchievements);
+	}
+
 	/** Advances the unlock-popup queue without interrupting gameplay. */
 	private void updateAchievementPopup() {
 		if (this.unlockedAchievement == null) {
@@ -806,7 +814,6 @@ public class GameScreen extends Screen {
 	 */
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
-				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds,
-				this.tookDamage);
+				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds);
 	}
 }

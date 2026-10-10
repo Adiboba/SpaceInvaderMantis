@@ -21,8 +21,6 @@ public class GameState {
 	/** Diamonds earned so far this run but not yet cashed out (GoG -
 	 * Currency System). Lost if the run ends in death. */
 	private int pendingDiamonds;
-	/** Whether the player has taken actual damage during this run. */
-	private boolean tookDamage;
 
 	/**
 	 * Constructor.
@@ -65,22 +63,12 @@ public class GameState {
 	public GameState(final int level, final int score,
 			final int livesRemaining, final int bulletsShot,
 			final int shipsDestroyed, final int pendingDiamonds) {
-		this(level, score, livesRemaining, bulletsShot, shipsDestroyed,
-				pendingDiamonds, false);
-	}
-
-	/** Creates state while preserving whether this run has taken damage. */
-	public GameState(final int level, final int score,
-			final int livesRemaining, final int bulletsShot,
-			final int shipsDestroyed, final int pendingDiamonds,
-			final boolean tookDamage) {
 		this.level = level;
 		this.score = score;
 		this.livesRemaining = livesRemaining;
 		this.bulletsShot = bulletsShot;
 		this.shipsDestroyed = shipsDestroyed;
 		this.pendingDiamonds = Math.max(0, pendingDiamonds);
-		this.tookDamage = tookDamage;
 	}
 
 	/**
@@ -125,9 +113,5 @@ public class GameState {
 		return pendingDiamonds;
 	}
 
-	/** @return Whether the player has taken damage during this run. */
-	public final boolean hasTakenDamage() {
-		return tookDamage;
-	}
 
 }

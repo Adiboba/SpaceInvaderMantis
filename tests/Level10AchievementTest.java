@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /** Standalone regression test. Compile into a separate test output directory. */
@@ -25,6 +26,11 @@ public final class Level10AchievementTest {
         for (Achievement a : manager.getAchievements())
             if (a.getId().equals(AchievementManager.LEVEL10_ALL_SHIPS_ID)) return a;
         throw new AssertionError("Fleet achievement missing");
+    }
+    private static Achievement achievement(AchievementManager manager, String id) {
+        for (Achievement a : manager.getAchievements())
+            if (a.getId().equals(id)) return a;
+        throw new AssertionError("Achievement missing: " + id);
     }
     public static void main(String[] args) throws Exception {
         Path output = Paths.get(Core.class.getProtectionDomain().getCodeSource().getLocation().toURI());
@@ -50,6 +56,13 @@ public final class Level10AchievementTest {
             try { manager.configureLevel10Ships(new HashSet<String>(Arrays.asList("bad,id"))); }
             catch (IllegalArgumentException e) { rejected = true; }
             check(rejected, "Comma in ID rejected for safe persistence");
+            check(manager.recordFlawlessLevelCompleted(true).isEmpty(), "Damaged level gives no survival progress");
+            List<Achievement> survivalUnlocks = manager.recordFlawlessLevelCompleted(false);
+            check(survivalUnlocks.size() == 1 && survivalUnlocks.get(0).getId().equals("bronze_survivor"), "First flawless level unlocks Bronze Survivor");
+            for (int i = 0; i < 3; i++) manager.recordFlawlessLevelCompleted(false);
+            check(achievement(manager, "silver_survivor").isUnlocked(), "Four flawless levels unlock Silver Survivor");
+            for (int i = 0; i < 6; i++) manager.recordFlawlessLevelCompleted(false);
+            check(achievement(manager, "gold_survivor").isUnlocked(), "Ten flawless levels unlock Gold Survivor");
             Set<String> required = roster();
             manager.configureLevel10Ships(required);
             required.clear();
@@ -67,6 +80,7 @@ public final class Level10AchievementTest {
             restarted.configureLevel10Ships(roster());
             check(restarted.getLevel10CompletedShipCount() == 1, "Partial progress survives restart");
             check(restarted.getTotalEnemiesKilled() == 3, "Kills survive fleet save");
+            check(restarted.getProgressText(achievement(restarted, "gold_survivor")).equals("UNLOCKED"), "Survival unlocks survive restart");
             check(restarted.recordLevelCompleted(10, "test_beta", true) == null, "Two ships still locked");
             Achievement unlocked = restarted.recordLevelCompleted(10, "test_gamma", true);
             check(unlocked != null && unlocked.getId().equals(AchievementManager.LEVEL10_ALL_SHIPS_ID), "Last distinct ship unlocks");

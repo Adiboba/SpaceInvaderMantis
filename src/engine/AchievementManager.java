@@ -25,6 +25,12 @@ public class AchievementManager {
 	private static final int SILVER_HUNTER_KILLS_TARGET = 500;
 	/** Number of lifetime kills required for Gold Hunter. */
 	private static final int GOLD_HUNTER_KILLS_TARGET = 1000;
+	/** Flawless levels required for Bronze Survivor. */
+	private static final int BRONZE_SURVIVOR_TARGET = 1;
+	/** Flawless levels required for Silver Survivor. */
+	private static final int SILVER_SURVIVOR_TARGET = 4;
+	/** Flawless levels required for Gold Survivor. */
+	private static final int GOLD_SURVIVOR_TARGET = 10;
 	/** The id we use for the weakest ship. */
 	public static final String STARTER_SHIP_ID = "starter";
 	/** Level that must be cleared to unlock Endless Mode. */
@@ -153,30 +159,33 @@ public class AchievementManager {
 				new Color(255, 215, 0)));
 	}
 
-	/** Adds the Bronze survival tier for ending a run alive. */
+	/** Adds the Bronze survival tier for the first flawless level. */
 	private void addBronzeSurvivorAchievement() {
 		addTierAchievement(new Achievement("bronze_survivor",
-				"Bronze Survivor", "Finish a run with at least 1 life.", 0,
+				"Bronze Survivor", "Clear 1 level without taking damage.",
+				BRONZE_SURVIVOR_TARGET,
 				SpriteType.Trophy,
 				this.playerProfile.isAchievementUnlocked("bronze_survivor"),
-				Requirement.RUN_SURVIVAL, new Color(205, 127, 50)));
+				Requirement.FLAWLESS_LEVELS, new Color(205, 127, 50)));
 	}
 
-	/** Adds the Silver survival tier for ending a run with two lives. */
+	/** Adds the Silver survival tier for four flawless levels. */
 	private void addSilverSurvivorAchievement() {
 		addTierAchievement(new Achievement("silver_survivor",
-				"Silver Survivor", "Finish a run with 2 or more lives.", 0,
+				"Silver Survivor", "Clear 4 levels without taking damage.",
+				SILVER_SURVIVOR_TARGET,
 				SpriteType.Trophy,
 				this.playerProfile.isAchievementUnlocked("silver_survivor"),
-				Requirement.RUN_SURVIVAL, new Color(192, 192, 192)));
+				Requirement.FLAWLESS_LEVELS, new Color(192, 192, 192)));
 	}
 
-	/** Adds the Gold survival tier for completing a run without damage. */
+	/** Adds the Gold survival tier for ten flawless levels. */
 	private void addGoldSurvivorAchievement() {
 		addTierAchievement(new Achievement("gold_survivor", "Gold Survivor",
-				"Finish a run without taking damage.", 0, SpriteType.Trophy,
+				"Clear 10 levels without taking damage.", GOLD_SURVIVOR_TARGET,
+				SpriteType.Trophy,
 				this.playerProfile.isAchievementUnlocked("gold_survivor"),
-				Requirement.RUN_SURVIVAL, new Color(255, 215, 0)));
+				Requirement.FLAWLESS_LEVELS, new Color(255, 215, 0)));
 	}
 
 	/**
@@ -241,24 +250,27 @@ public class AchievementManager {
 	}
 
 	/**
-	 * Records an alive run completion for the survival achievement tiers.
-	 * Extra-life items can increase the Silver tier's life count, but only an
-	 * actual player hit can disqualify the Gold tier.
+	 * Records one level clear for the survival achievement tiers.
 	 *
-	 * @param livesRemaining Lives remaining when the run ended.
-	 * @param tookDamage Whether the player was hit during the run.
+	 * @param tookDamage Whether the player was hit during the level.
+	 * @return Newly unlocked survival achievements, in tier order.
 	 */
-	public final List<Achievement> recordRunCompleted(final int livesRemaining,
+	public final List<Achievement> recordFlawlessLevelCompleted(
 			final boolean tookDamage) {
 		List<Achievement> unlockedAchievements = new ArrayList<Achievement>();
-		if (livesRemaining <= 0)
+		if (tookDamage)
 			return unlockedAchievements;
+		this.playerProfile.recordFlawlessLevelCleared();
 		addUnlockedSurvivalAchievement(unlockedAchievements, "bronze_survivor",
-				true);
+				this.playerProfile.getFlawlessLevelsCleared()
+						>= BRONZE_SURVIVOR_TARGET);
 		addUnlockedSurvivalAchievement(unlockedAchievements, "silver_survivor",
-				livesRemaining >= 2);
+				this.playerProfile.getFlawlessLevelsCleared()
+						>= SILVER_SURVIVOR_TARGET);
 		addUnlockedSurvivalAchievement(unlockedAchievements, "gold_survivor",
-				!tookDamage);
+				this.playerProfile.getFlawlessLevelsCleared()
+						>= GOLD_SURVIVOR_TARGET);
+		saveProfile();
 		return unlockedAchievements;
 	}
 
@@ -326,6 +338,7 @@ public class AchievementManager {
 	/** @return Requirement text suitable for the achievement screen. */
 	public final String getRequirementText(final Achievement achievement) {
 		if (achievement.getRequirement() == Requirement.LEVEL10_ALL_SHIPS
+				|| achievement.getRequirement() == Requirement.FLAWLESS_LEVELS
 				|| achievement.getRequiredEnemyKills() <= 0)
 			return achievement.getDescription();
 		return "Unlock: defeat " + achievement.getRequiredEnemyKills()
@@ -342,6 +355,9 @@ public class AchievementManager {
 			return getLevel10CompletedShipCount() + "/"
 					+ this.requiredLevel10Ships.size();
 		}
+		if (achievement.getRequirement() == Requirement.FLAWLESS_LEVELS)
+			return this.playerProfile.getFlawlessLevelsCleared() + "/"
+					+ achievement.getRequiredEnemyKills();
 		if (achievement.getRequiredEnemyKills() <= 0)
 			return "LOCKED";
 		return getTotalEnemiesKilled() + "/" + achievement.getRequiredEnemyKills();

@@ -138,7 +138,6 @@ public final class Core {
 				break;
 			case 2:
 				// Game & score.
-				List<Achievement> unlockedAchievements = new ArrayList<Achievement>();
 				do {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
@@ -160,18 +159,12 @@ public final class Core {
 							gameState.getLivesRemaining(),
 							gameState.getBulletsShot(),
 							gameState.getShipsDestroyed(),
-							gameState.getPendingDiamonds(),
-							gameState.hasTakenDamage());
+							gameState.getPendingDiamonds());
 
 					gameState = offerCashOut(gameState, width, height);
 
 				} while (gameState.getLivesRemaining() > 0
 						&& gameState.getLevel() <= NUM_LEVELS);
-
-				if (gameState.getLivesRemaining() > 0)
-					unlockedAchievements = getAchievementManager().recordRunCompleted(
-							gameState.getLivesRemaining(),
-							gameState.hasTakenDamage());
 
 				gameState = settlePendingDiamonds(gameState);
 
@@ -181,8 +174,7 @@ public final class Core {
 						+ gameState.getLivesRemaining() + " lives remaining, "
 						+ gameState.getBulletsShot() + " bullets shot and "
 						+ gameState.getShipsDestroyed() + " ships destroyed.");
-				currentScreen = new ScoreScreen(width, height, FPS, gameState,
-						unlockedAchievements);
+				currentScreen = new ScoreScreen(width, height, FPS, gameState);
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
 				break;
@@ -277,8 +269,7 @@ public final class Core {
 		// Diamonds were banked by the screen itself.
 		return new GameState(NUM_LEVELS + 1, gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
-				gameState.getShipsDestroyed(), 0,
-				gameState.hasTakenDamage());
+				gameState.getShipsDestroyed(), 0);
 	}
 
 	/**
@@ -302,8 +293,7 @@ public final class Core {
 		}
 		return new GameState(gameState.getLevel(), gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
-				gameState.getShipsDestroyed(), 0,
-				gameState.hasTakenDamage());
+				gameState.getShipsDestroyed(), 0);
 	}
 
 	/**
