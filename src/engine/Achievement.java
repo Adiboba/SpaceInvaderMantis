@@ -7,6 +7,10 @@ import engine.DrawManager.SpriteType;
 /** Defines an achievement shown to the player. */
 public class Achievement {
 
+	/** Events that can unlock an achievement. */
+	public enum Requirement { ENEMY_KILLS, LEVEL10_ALL_SHIPS }
+	private final Requirement requirement;
+
 	/** Persistent achievement identifier. */
 	private String id;
 	/** Player-facing achievement name. */
@@ -35,6 +39,16 @@ public class Achievement {
 	public Achievement(final String id, final String name,
 			final String description, final int requiredEnemyKills,
 			final SpriteType spriteType, final boolean unlocked) {
+		this(id, name, description, requiredEnemyKills, spriteType, unlocked,
+				Requirement.ENEMY_KILLS);
+	}
+
+	/** Creates an achievement with an explicit unlocking condition. */
+	public Achievement(final String id, final String name,
+			final String description, final int requiredEnemyKills,
+			final SpriteType spriteType, final boolean unlocked,
+			final Requirement requirement) {
+		this.requirement = requirement;
 		this.id = id;
 		this.name = name;
 		this.description = description;
@@ -61,6 +75,11 @@ public class Achievement {
 			final Color iconColor) {
 		this(id, name, description, requiredEnemyKills, spriteType, unlocked);
 		this.iconColor = iconColor;
+	}
+
+	/** @return Event used to evaluate this achievement. */
+	public final Requirement getRequirement() {
+		return this.requirement;
 	}
 
 	/** @return Persistent identifier. */
