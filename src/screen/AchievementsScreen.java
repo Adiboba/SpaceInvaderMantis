@@ -254,10 +254,6 @@ public class AchievementsScreen extends Screen {
 		Color trophyColor = achievement.isUnlocked()
 				? achievement.getIconColor() : LOCKED;
 
-		if (achievement.getSpriteType() == DrawManager.SpriteType.FleetMaster){
-			trophyColor = Color.white;
-		}
-
 		Color nameColor = isSelected ? SELECTED : UNSELECTED;
 
 		DrawManager.SpriteType icon = achievement.getSpriteType();
