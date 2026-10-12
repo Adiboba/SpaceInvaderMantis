@@ -147,6 +147,8 @@ public class GameScreen extends Screen {
 	private int bulletsShot;
 	/** Total ships destroyed by the player. */
 	private int shipsDestroyed;
+    /** Total coins collected by the player. */
+    private int coinsCollected;
 	/** Moment the game starts. */
 	private long gameStartTime;
 	/** Checks if the level is finished. */
@@ -201,6 +203,7 @@ public class GameScreen extends Screen {
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
 		this.levelsCompletedRun = gameState.getLevelsCompletedRun();
+        this.coinsCollected = gameState.getCoinsCollected();
 		this.tookDamage = false;
 	}
 
@@ -366,6 +369,7 @@ public class GameScreen extends Screen {
 						.recordFlawlessLevelCompleted(this.tookDamage));
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
+                showUnlockedAchievement(Core.getAchievementManager().recordRunCoins(this.coinsCollected));
 
 				// Last level cleared alive: the game is beaten.
 				if (this.level == Core.getNumLevels())
@@ -687,7 +691,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Moves falling coins, hands coins touched by the ship to the
-	 * CurrencyManager, and recycles coins that leave the screen.
+	 * CurrencyManager, updates coins collected in the current run, and recycles coins that leave the screen.
 	 */
 	private void updateCoins() {
 		Set<Coin> recyclable = new HashSet<Coin>();
@@ -696,6 +700,8 @@ public class GameScreen extends Screen {
 			if (this.lives > 0 && !this.ship.isDestroyed()
 					&& checkCollision(coin, this.ship)) {
 				CurrencyManager.getInstance().addCoins(coin.getValue());
+                this.coinsCollected += coin.getValue();
+
 				recyclable.add(coin);
 				this.logger.info("Coin collected, balance: "
 						+ CurrencyManager.getInstance().getCoins());
@@ -718,6 +724,7 @@ public class GameScreen extends Screen {
 		for (Coin coin : this.coins)
 			total += coin.getValue();
 		CurrencyManager.getInstance().addCoins(total);
+        this.coinsCollected += total;
 		this.logger.info("Level cleared, collected " + total
 				+ " remaining coins, balance: "
 				+ CurrencyManager.getInstance().getCoins());
@@ -819,6 +826,6 @@ public class GameScreen extends Screen {
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
 				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds,
-				this.levelsCompletedRun);
+				this.levelsCompletedRun, this.coinsCollected);
 	}
 }

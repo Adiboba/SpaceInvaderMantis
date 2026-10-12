@@ -229,7 +229,7 @@ public class AchievementsScreen extends Screen {
 		if (this.scrollOffset + getRowCount()
 				< this.pages.get(this.currentPage).size()) {
 			this.drawManager.drawRegularString(
-					" ------ SCROLL DOWN FOR MORE ------",
+					" ------  MORE ACHIEVEMENT BELOW  ------",
 					TEXT_X,
 					430,
 					MUTED);

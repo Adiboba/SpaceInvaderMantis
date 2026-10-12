@@ -109,7 +109,9 @@ public final class DrawManager {
 		/** Accuracy target achievement icon. */
 		Accuracytarget,
 		/** Enemies killed achievement icon. */
-		Hunter
+		Hunter,
+        /** Currency collected in one run achievement icon**/
+        Looter
 	};
 
 	/**
@@ -143,6 +145,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.BossKill, new boolean[11][11]);
 			spriteMap.put(SpriteType.Accuracytarget, new boolean[11][11]);
 			spriteMap.put(SpriteType.Hunter, new boolean[13][12]);
+            spriteMap.put(SpriteType.Looter, new boolean[11][11]);
 
 
 			fileManager.loadSprite(spriteMap);

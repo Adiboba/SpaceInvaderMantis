@@ -125,7 +125,7 @@ public final class Core {
 
 		int returnCode = 1;
 		do {
-			gameState = new GameState(1, 0, MAX_LIVES, 0, 0);
+			gameState = new GameState(1, 0, MAX_LIVES, 0, 0, 0);
 
 			switch (returnCode) {
 			case 1:
@@ -160,7 +160,8 @@ public final class Core {
 							gameState.getBulletsShot(),
 							gameState.getShipsDestroyed(),
 							gameState.getPendingDiamonds(),
-							gameState.getLevelsCompletedRun());
+							gameState.getLevelsCompletedRun(),
+                            gameState.getCoinsCollected());
 
 					gameState = offerCashOut(gameState, width, height);
 
@@ -173,8 +174,9 @@ public final class Core {
 						+ " score screen at " + FPS + " fps, with a score of "
 						+ gameState.getScore() + ", "
 						+ gameState.getLivesRemaining() + " lives remaining, "
-						+ gameState.getBulletsShot() + " bullets shot and "
-						+ gameState.getShipsDestroyed() + " ships destroyed.");
+						+ gameState.getBulletsShot() + " bullets shot, "
+						+ gameState.getShipsDestroyed() + " ships destroyed, and "
+                        + gameState.getCoinsCollected() + " coins collected. ");
 				currentScreen = new ScoreScreen(width, height, FPS, gameState);
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
@@ -271,7 +273,7 @@ public final class Core {
 		return new GameState(NUM_LEVELS + 1, gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
 				gameState.getShipsDestroyed(), 0,
-				gameState.getLevelsCompletedRun());
+				gameState.getLevelsCompletedRun(), gameState.getCoinsCollected());
 	}
 
 	/**
@@ -296,7 +298,7 @@ public final class Core {
 		return new GameState(gameState.getLevel(), gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
 				gameState.getShipsDestroyed(), 0,
-				gameState.getLevelsCompletedRun());
+				gameState.getLevelsCompletedRun(), gameState.getCoinsCollected());
 	}
 
 	/**

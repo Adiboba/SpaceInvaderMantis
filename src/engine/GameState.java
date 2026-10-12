@@ -23,10 +23,12 @@ public class GameState {
 	private int pendingDiamonds;
 	/** Levels cleared alive during the current run. */
 	private int levelsCompletedRun;
+    /**coins collected until now.*/
+    private int coinsCollected;
 
 	/**
 	 * Constructor.
-	 * 
+	 *
 	 * @param level
 	 *            Current game level.
 	 * @param score
@@ -37,11 +39,13 @@ public class GameState {
 	 *            Bullets shot until now.
 	 * @param shipsDestroyed
 	 *            Ships destroyed until now.
+     * @param coinsCollected
+     *             Coins collected until now.
 	 */
 	public GameState(final int level, final int score,
 			final int livesRemaining, final int bulletsShot,
-			final int shipsDestroyed) {
-		this(level, score, livesRemaining, bulletsShot, shipsDestroyed, 0);
+			final int shipsDestroyed, final int coinsCollected) {
+		this(level, score, livesRemaining, bulletsShot, shipsDestroyed, 0, coinsCollected);
 	}
 
 	/**
@@ -59,14 +63,16 @@ public class GameState {
 	 *            Bullets shot until now.
 	 * @param shipsDestroyed
 	 *            Ships destroyed until now.
+     * @param coinsCollected
+     *             Coins collected until now.
 	 * @param pendingDiamonds
 	 *            Diamonds earned this run, not yet cashed out.
 	 */
 	public GameState(final int level, final int score,
 			final int livesRemaining, final int bulletsShot,
-			final int shipsDestroyed, final int pendingDiamonds) {
+			final int shipsDestroyed, final int pendingDiamonds,final int coinsCollected) {
 		this(level, score, livesRemaining, bulletsShot, shipsDestroyed,
-				pendingDiamonds, 0);
+				pendingDiamonds, 0, coinsCollected);
 	}
 
 	/**
@@ -78,12 +84,13 @@ public class GameState {
 	 * @param bulletsShot Shots fired during the run.
 	 * @param shipsDestroyed Ships destroyed during the run.
 	 * @param pendingDiamonds Diamonds earned but not yet cashed out.
+     * @param coinsCollected Coins collected until now.
 	 * @param levelsCompletedRun Levels cleared alive during this run.
 	 */
 	public GameState(final int level, final int score,
 			final int livesRemaining, final int bulletsShot,
 			final int shipsDestroyed, final int pendingDiamonds,
-			final int levelsCompletedRun) {
+			final int levelsCompletedRun, final int coinsCollected) {
 		this.level = level;
 		this.score = score;
 		this.livesRemaining = livesRemaining;
@@ -91,6 +98,7 @@ public class GameState {
 		this.shipsDestroyed = shipsDestroyed;
 		this.pendingDiamonds = Math.max(0, pendingDiamonds);
 		this.levelsCompletedRun = Math.max(0, levelsCompletedRun);
+        this.coinsCollected = coinsCollected;
 	}
 
 	/**
@@ -141,5 +149,10 @@ public class GameState {
 	public final int getLevelsCompletedRun() {
 		return levelsCompletedRun;
 	}
+
+    /**
+     * @return Coins collected during this run.
+     */
+    public final int getCoinsCollected() {return coinsCollected;}
 
 }

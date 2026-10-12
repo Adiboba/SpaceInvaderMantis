@@ -37,6 +37,10 @@ public class AchievementManager {
 	private static final int ACCURACY_100_TARGET = 100;
 	/** Levels that must be cleared in the run for accuracy achievements. */
 	private static final int ACCURACY_LEVELS_TARGET = 3;
+    /** thresholds for the tiered currency achievements. */
+    private static final int RUNCOIN_10_TARGET = 10;
+    private static final int RUNCOIN_25_TARGET = 25;
+    private static final int RUNCOIN_50_TARGET = 50;
 	/** The id we use for the weakest ship. */
 	public static final String STARTER_SHIP_ID = "starter";
 	/** Level that must be cleared to unlock Endless Mode. */
@@ -85,6 +89,7 @@ public class AchievementManager {
 		addSilverSurvivorAchievement();
 		addGoldSurvivorAchievement();
 		addAccuracyAchievements();
+        addRunCoinAchievements();
 	}
 
 	/** Adds the First Flight achievement. */
@@ -205,6 +210,16 @@ public class AchievementManager {
 				ACCURACY_100_TARGET, Color.RED);
 	}
 
+    /** Adds the 10, 25, and 50 coins per run achievements. */
+    private void addRunCoinAchievements() {
+        addRunCoinAchievement("runcoin_10", "Bronze Looter",
+                RUNCOIN_10_TARGET, new Color(205, 127, 50));
+        addRunCoinAchievement("runcoin_25", "Silver Looter",
+                RUNCOIN_25_TARGET, new Color(192, 192, 192));
+        addRunCoinAchievement("runcoin_50", "Gold Looter",
+                RUNCOIN_50_TARGET, new Color(255, 215, 0));
+    }
+
 	/** Adds one accuracy achievement to the tier page. */
 	private void addAccuracyAchievement(final String id, final String name,
 			final int target, final Color color) {
@@ -215,6 +230,16 @@ public class AchievementManager {
 				this.playerProfile.isAchievementUnlocked(id),
 				Requirement.ACCURACY, color));
 	}
+
+    /** Adds one coins in one run achievement to the tier page. */
+    private void addRunCoinAchievement(final String id, final String name,
+                                       final int target, final Color color) {
+        addTierAchievement(new Achievement(id, name,
+                "Obtain " + target + " coins in one run. ", target,
+                SpriteType.Looter,
+                this.playerProfile.isAchievementUnlocked(id),
+                Requirement.RUNCOINS, color));
+    }
 
 	/**
 	 * Adds an achievement to page 1 (normal achievements).
@@ -244,11 +269,6 @@ public class AchievementManager {
 	 */
 	private void addToPage(final List<Achievement> page,
 						   final Achievement achievement, final String pageName) {
-		if (page.size() >= ACHIEVEMENTS_PER_PAGE) {
-			Core.getLogger().warning("The " + pageName + " achievement page "
-					+ "has more than " + ACHIEVEMENTS_PER_PAGE
-					+ " achievements.");
-		}
 		page.add(achievement);
 	}
 
@@ -306,6 +326,28 @@ public class AchievementManager {
 			saveProfile();
 		return highestUnlocked;
 	}
+
+    /**
+     * Records coins obtained in this run and unlocks every achieved accuracy tier.
+     *
+     * @param coinsCollected Number of coins collected in the run.
+     * @return The highest newly unlocked accuracy achievement, or null.
+     */
+    public final Achievement recordRunCoins(final int coinsCollected) {
+        Achievement highestUnlocked = null;
+        for (Achievement achievement : this.tierAchievements) {
+            if (achievement.getRequirement() != Requirement.RUNCOINS
+                    || achievement.isUnlocked()
+                    || coinsCollected < achievement.getRequiredEnemyKills())
+                continue;
+            achievement.unlock();
+            this.playerProfile.unlockAchievement(achievement.getId());
+            highestUnlocked = achievement;
+        }
+        if (highestUnlocked != null)
+            saveProfile();
+        return highestUnlocked;
+    }
 
 	/**
 	 * Records one level clear for the survival achievement tiers.
@@ -399,7 +441,8 @@ public class AchievementManager {
 			return achievement.getDescription();
 		if (achievement.getRequirement() == Requirement.LEVEL10_ALL_SHIPS
 				|| achievement.getRequirement() == Requirement.FLAWLESS_LEVELS
-				|| achievement.getRequiredEnemyKills() <= 0)
+                || achievement.getRequirement() == Requirement.RUNCOINS
+                || achievement.getRequiredEnemyKills() <= 0)
 			return achievement.getDescription();
 		return "Unlock: defeat " + achievement.getRequiredEnemyKills()
 				+ " enemies.";
@@ -420,7 +463,7 @@ public class AchievementManager {
 					+ achievement.getRequiredEnemyKills();
 		if (achievement.getRequirement() == Requirement.ACCURACY)
 			return achievement.getRequiredEnemyKills() + "%";
-		if (achievement.getRequiredEnemyKills() <= 0)
+		if (achievement.getRequiredEnemyKills() <= 0 || achievement.getRequirement() == Requirement.RUNCOINS)
 			return "LOCKED";
 		return getTotalEnemiesKilled() + "/" + achievement.getRequiredEnemyKills();
 	}
