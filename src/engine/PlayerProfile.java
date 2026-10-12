@@ -32,21 +32,22 @@ public class PlayerProfile {
 	 */
 	public PlayerProfile(final int totalEnemiesKilled,
 			final Set<String> unlockedAchievements) {
-		this(totalEnemiesKilled, unlockedAchievements, new HashSet<String>(), 0);
+		this(totalEnemiesKilled, unlockedAchievements, new HashSet<String>(), 0,0);
 	}
 
 	/** Loads progress, preserving compatibility with older profile callers. */
 	public PlayerProfile(final int totalEnemiesKilled,
 			final Set<String> unlockedAchievements,
 			final Set<String> level10CompletedShips) {
-		this(totalEnemiesKilled, unlockedAchievements, level10CompletedShips, 0);
+		this(totalEnemiesKilled, unlockedAchievements, level10CompletedShips, 0,0);
 	}
 
 	/** Loads progress including cumulative flawless-level clears. */
 	public PlayerProfile(final int totalEnemiesKilled,
 			final Set<String> unlockedAchievements,
 			final Set<String> level10CompletedShips,
-			final int flawlessLevelsCleared) {
+			final int flawlessLevelsCleared,
+						 final int totalItemsUsed) {
 		this.level10CompletedShips = new HashSet<String>(level10CompletedShips);
 		this.totalEnemiesKilled = totalEnemiesKilled;
 		this.unlockedAchievements = new HashSet<String>(unlockedAchievements);
@@ -82,6 +83,14 @@ public class PlayerProfile {
 	/** @return Total levels cleared without player damage. */
 	public final int getFlawlessLevelsCleared() {
 		return this.flawlessLevelsCleared;
+	}
+
+	/** Records one successful item use. */
+	public final void recordItemUsed() {this.totalItemsUsed++;
+	}
+
+	/** @return Total successful item uses. */
+	public final int getTotalItemsUsed() {return this.totalItemsUsed;
 	}
 
 	/**

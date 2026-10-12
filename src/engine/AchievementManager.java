@@ -47,6 +47,8 @@ public class AchievementManager {
 	private static final int ENDLESS_UNLOCK_LEVEL = 10;
 	/** Identifier of the Infinity Void achievement. */
 	private static final String INFINITY_VOID_ID = "infinity_void";
+	/** Keep track of item used by player*/
+	private static final int[] ITEM_USES_TARGETS = {100, 250, 500};
 
 	public static final String LEVEL10_ALL_SHIPS_ID = "level10_all_ships";
 	/** Empty until the ship team supplies the complete required roster. */
@@ -90,6 +92,7 @@ public class AchievementManager {
 		addGoldSurvivorAchievement();
 		addAccuracyAchievements();
         addRunCoinAchievements();
+		addItemUseAchievements();
 	}
 
 	/** Adds the First Flight achievement. */
@@ -241,6 +244,41 @@ public class AchievementManager {
                 Requirement.RUNCOINS, color));
     }
 
+	/** Adds the three item-use tier achievements. */
+	private void addItemUseAchievements() {
+		addTierAchievement(new Achievement(
+				"item_use_bronze",
+				"Bronze Item User",
+				"Successfully use 100 items.",
+				ITEM_USES_TARGETS[0],
+				SpriteType.ItemCol,
+				this.playerProfile.isAchievementUnlocked("item_use_bronze"),
+				Requirement.ITEM_USES,
+				new Color(205, 127, 50)));
+
+		addTierAchievement(new Achievement(
+				"item_use_silver",
+				"Silver Item User",
+				"Successfully use 250 items.",
+				ITEM_USES_TARGETS[1],
+				SpriteType.ItemCol,
+				this.playerProfile.isAchievementUnlocked("item_use_silver"),
+				Requirement.ITEM_USES,
+				new Color(192, 192, 192)));
+
+		addTierAchievement(new Achievement(
+				"item_use_gold",
+				"Gold Item User",
+				"Successfully use 500 items.",
+				ITEM_USES_TARGETS[2],
+				SpriteType.ItemCol,
+				this.playerProfile.isAchievementUnlocked("item_use_gold"),
+				Requirement.ITEM_USES,
+				new Color(255, 215, 0)));
+	}
+
+
+
 	/**
 	 * Adds an achievement to page 1 (normal achievements).
 	 *
@@ -296,6 +334,33 @@ public class AchievementManager {
 		saveProfile();
 		return unlockedAchievement;
 	}
+
+
+	/** Records one successfully used item and checks item-use tiers. */
+
+	/** Records one successfully used item and checks item-use tiers. */
+	public final Achievement recordItemUsed() {
+		this.playerProfile.recordItemUsed();
+		Achievement unlockedAchievement = null;
+
+		for (Achievement achievement : this.tierAchievements) {
+			if (!achievement.getId().startsWith("item_use_")
+					|| achievement.isUnlocked()
+					|| this.playerProfile.getTotalItemsUsed()
+					< achievement.getRequiredEnemyKills()) {
+				continue;
+			}
+
+			achievement.unlock();
+			this.playerProfile.unlockAchievement(achievement.getId());
+			unlockedAchievement = achievement;
+		}
+
+		saveProfile();
+		return unlockedAchievement;
+	}
+
+
 
 	/**
 	 * Records final run accuracy and unlocks every achieved accuracy tier.
@@ -435,8 +500,12 @@ public class AchievementManager {
 		return completed.size();
 	}
 
+
+
 	/** @return Requirement text suitable for the achievement screen. */
 	public final String getRequirementText(final Achievement achievement) {
+		if (achievement.getId().startsWith("item_use_"))
+			return achievement.getDescription();
 		if (achievement.getRequirement() == Requirement.ACCURACY)
 			return achievement.getDescription();
 		if (achievement.getRequirement() == Requirement.LEVEL10_ALL_SHIPS
@@ -465,6 +534,9 @@ public class AchievementManager {
 			return achievement.getRequiredEnemyKills() + "%";
 		if (achievement.getRequiredEnemyKills() <= 0 || achievement.getRequirement() == Requirement.RUNCOINS)
 			return "LOCKED";
+		if (achievement.getId().startsWith("item_use_"))
+			return this.playerProfile.getTotalItemsUsed() + "/"
+					+ achievement.getRequiredEnemyKills();
 		return getTotalEnemiesKilled() + "/" + achievement.getRequiredEnemyKills();
 	}
 

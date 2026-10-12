@@ -111,7 +111,9 @@ public final class DrawManager {
 		/** Enemies killed achievement icon. */
 		Hunter,
         /** Currency collected in one run achievement icon**/
-        Looter
+        Looter,
+        /** Item used achievement icon. */
+		ItemCol
 	};
 
 	/**
@@ -146,6 +148,7 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.Accuracytarget, new boolean[11][11]);
 			spriteMap.put(SpriteType.Hunter, new boolean[13][12]);
             spriteMap.put(SpriteType.Looter, new boolean[11][11]);
+			spriteMap.put(SpriteType.ItemCol, new boolean[12][12]);
 
 
 			fileManager.loadSprite(spriteMap);
