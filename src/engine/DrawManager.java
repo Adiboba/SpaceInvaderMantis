@@ -172,6 +172,8 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.Hunter, new boolean[13][12]);
             spriteMap.put(SpriteType.Looter, new boolean[11][11]);
 			spriteMap.put(SpriteType.ItemCol, new boolean[12][12]);
+			spriteMap.put(SpriteType.ShipFastAttack, new boolean[13][8]);
+			spriteMap.put(SpriteType.ShipBigBullet, new boolean[13][8]);
 
 
 			fileManager.loadSprite(spriteMap);
@@ -242,6 +244,8 @@ public final class DrawManager {
 
 		graphics = frame.getGraphics();
 		backBufferGraphics = backBuffer.getGraphics();
+		worldOffsetX = 0;
+		worldOffsetY = 0;
 
 		backBufferGraphics.setColor(Color.BLACK);
 		backBufferGraphics
