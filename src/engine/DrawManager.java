@@ -1,5 +1,8 @@
 package engine;
 
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import entity.EnemyShip;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontFormatException;
@@ -16,6 +19,7 @@ import screen.MenuItem;
 import screen.Screen;
 import entity.Coin;
 import entity.Entity;
+import entity.Particle;
 import entity.Ship;
 import item.ItemAPI;
 import item.ItemSystem;
@@ -51,6 +55,10 @@ public final class DrawManager {
 	private static final int ITEM_NOTICE_BOTTOM_OFFSET = 60;
 	/** The shield bubble blinks during this many last milliseconds. */
 	private static final long SHIELD_BLINK_MILLIS = 2000;
+	/** Current world offset X (screen shake). */
+	private static int worldOffsetX;
+	/** Current world offset Y (screen shake). */
+	private static int worldOffsetY;
 	/** Normal sized font. */
 	private static Font fontRegular;
 	/** Normal sized font properties. */
@@ -94,6 +102,15 @@ public final class DrawManager {
 		EnemyShipSpecial,
 		/** Destroyed enemy ship. */
 		Explosion,
+		/** Player ship with a high movement speed (Fast Move). */
+		ShipFastMove,
+		/** Player ship that shoots from two barrels (Two-Way Shot). */
+		ShipTwoWay,
+		/** Fast Attack player ship. */
+		ShipFastAttack,
+		/** Big Bullet player ship. */
+		ShipBigBullet,
+
 		/** First Flight achievement icon. */
 		FirstFlight,
 		/** Achievement trophy icon. */
@@ -114,6 +131,8 @@ public final class DrawManager {
         Looter,
         /** Item used achievement icon. */
 		ItemCol
+
+
 	};
 
 	/**
@@ -139,6 +158,9 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.EnemyShipC2, new boolean[12][8]);
 			spriteMap.put(SpriteType.EnemyShipSpecial, new boolean[16][7]);
 			spriteMap.put(SpriteType.Explosion, new boolean[13][7]);
+			spriteMap.put(SpriteType.ShipFastMove, new boolean[13][8]);
+			spriteMap.put(SpriteType.ShipTwoWay, new boolean[13][8]);
+
 			spriteMap.put(SpriteType.FirstFlight, new boolean[11][8]);
 			spriteMap.put(SpriteType.Trophy, new boolean[11][8]);
 			spriteMap.put(SpriteType.FleetMaster, new boolean[23][23]);
@@ -235,8 +257,27 @@ public final class DrawManager {
 	 *            Screen to draw on.
 	 */
 	public void completeDrawing(final Screen screen) {
+		setWorldOffset(0, 0);
 		graphics.drawImage(backBuffer, frame.getInsets().left,
 				frame.getInsets().top, frame);
+	}
+
+	/**
+	 * AUTHORED BY: VFX TEAM (Effection)
+	 *
+	 * Moves everything drawn after this call by the given offset.
+	 * Used for screen shake. Call setWorldOffset(0, 0) before the HUD.
+	 *
+	 * @param offsetX
+	 *            X offset in pixels.
+	 * @param offsetY
+	 *            Y offset in pixels.
+	 */
+	public void setWorldOffset(final int offsetX, final int offsetY) {
+		backBufferGraphics.translate(offsetX - worldOffsetX,
+				offsetY - worldOffsetY);
+		worldOffsetX = offsetX;
+		worldOffsetY = offsetY;
 	}
 
 	/**
@@ -251,8 +292,21 @@ public final class DrawManager {
 	 */
 	public void drawEntity(final Entity entity, final int positionX,
 			final int positionY) {
+		// Enemy ships can be see-through while flickering / fading out.
+		float alpha = 1f;
+		if (entity instanceof EnemyShip)
+			alpha = ((EnemyShip) entity).getAlpha();
+		if (alpha <= 0f)
+			return;
+
+		Graphics2D g2d = (Graphics2D) backBufferGraphics;
+		g2d.setComposite(AlphaComposite.getInstance(
+				AlphaComposite.SRC_OVER, alpha));
+
 		drawSprite(entity.getSpriteType(), positionX, positionY,
 				entity.getColor());
+
+		g2d.setComposite(AlphaComposite.SrcOver); // back to normal
 	}
 
 	/**
@@ -277,6 +331,7 @@ public final class DrawManager {
 							positionY + j * 2,
 							1, 1);
 	}
+
 	/**
 	 * Draws regular text at an exact position, left aligned.
 	 *
@@ -306,7 +361,7 @@ public final class DrawManager {
 		backBufferGraphics.setColor(color);
 		backBufferGraphics.drawRect(positionX, positionY, width, height);
 	}
-
+	
 	/**
 	 * Draws a dropped coin as a filled circle (GoG - Currency System).
 	 * Coins have no entry in the shared sprite file, so they are drawn
@@ -551,8 +606,25 @@ public final class DrawManager {
 	}
 
 	/**
+	 * Draws a sparkle, see-through according to its age.
+	 * AUTHORED BY: VFX TEAM (Effection)
+	 *
+	 * @param particle
+	 *            Particle to draw.
+	 */
+	public void drawParticle(final Particle particle) {
+		java.awt.Graphics2D g2d = (java.awt.Graphics2D) backBufferGraphics;
+		g2d.setComposite(java.awt.AlphaComposite.getInstance(
+				java.awt.AlphaComposite.SRC_OVER, particle.getAlpha()));
+		g2d.setColor(particle.getColor());
+		g2d.fillRect(particle.getX(), particle.getY(), particle.getSize(),
+				particle.getSize());
+		g2d.setComposite(java.awt.AlphaComposite.SrcOver);
+	}
+
+	/**
 	 * For debugging purpouses, draws the canvas borders.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw in.
 	 */
@@ -569,7 +641,7 @@ public final class DrawManager {
 
 	/**
 	 * For debugging purpouses, draws a grid over the canvas.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw in.
 	 */
@@ -584,7 +656,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws current score on screen.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param score
@@ -599,7 +671,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws number of remaining lives on screen.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param lives
@@ -616,7 +688,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws a thick line from side to side of the screen.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param positionY
@@ -631,7 +703,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws game title.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 */
@@ -644,7 +716,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws main menu.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param selected
@@ -674,7 +746,7 @@ public final class DrawManager {
 	 * Finds the menu item drawn at a given height. Each item owns a full-width
 	 * row as tall as the spacing between items, so the whole row is clickable,
 	 * not just the text.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen the menu is drawn on.
 	 * @param positionY
@@ -699,7 +771,7 @@ public final class DrawManager {
 	/**
 	 * Height of the baseline of a menu item. Drawing and hit-testing both use
 	 * this, so they cannot drift apart.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen the menu is drawn on.
 	 * @param index
@@ -712,7 +784,7 @@ public final class DrawManager {
 
 	/**
 	 * Distance between two menu items.
-	 * 
+	 *
 	 * @return Spacing, in pixels.
 	 */
 	private int menuItemSpacing() {
@@ -729,9 +801,20 @@ public final class DrawManager {
 	 *            Keys to show, already worded for the current state.
 	 */
 	public void drawKeyHints(final Screen screen, final String hints) {
+		Font hintFont = fontRegular;
+		FontMetrics metrics = fontRegularMetrics;
+		int maxWidth = screen.getWidth() - 20;
+		int textWidth = metrics.stringWidth(hints);
+		if (textWidth > maxWidth) {
+			hintFont = fontRegular.deriveFont(
+					fontRegular.getSize2D() * maxWidth / textWidth);
+			metrics = backBufferGraphics.getFontMetrics(hintFont);
+		}
+		backBufferGraphics.setFont(hintFont);
 		backBufferGraphics.setColor(Color.GRAY);
-		drawCenteredRegularString(screen, hints,
-				screen.getHeight() - fontRegularMetrics.getHeight());
+		backBufferGraphics.drawString(hints,
+				(screen.getWidth() - metrics.stringWidth(hints)) / 2,
+				screen.getHeight() - fontRegularMetrics.getHeight() * 2);
 	}
 
 	/**
@@ -873,7 +956,7 @@ public final class DrawManager {
 	 * Draws the title of a screen reached from the main menu, in the same
 	 * colour and place as the high score screen's title. Sets its own colour,
 	 * so it does not depend on what was drawn before it.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param title
@@ -886,7 +969,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws game results.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param score
@@ -1004,8 +1087,26 @@ public final class DrawManager {
 	}
 
 	/**
+	 * Draws high score screen title and instructions.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 */
+	public void drawHighScoreMenu(final Screen screen) {
+		String highScoreString = "High Scores";
+		String instructionsString = "Press Space to return";
+
+		backBufferGraphics.setColor(Color.GREEN);
+		drawCenteredBigString(screen, highScoreString, screen.getHeight() / 8);
+
+		backBufferGraphics.setColor(Color.GRAY);
+		drawCenteredRegularString(screen, instructionsString,
+				screen.getHeight() / 5);
+	}
+
+	/**
 	 * Draws high scores.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param highScores
@@ -1028,7 +1129,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws a centered string on regular font.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param string
@@ -1045,7 +1146,7 @@ public final class DrawManager {
 
 	/**
 	 * Draws a centered string on big font.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param string
@@ -1139,7 +1240,7 @@ public final class DrawManager {
 
 	/**
 	 * Countdown to game start.
-	 * 
+	 *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param level

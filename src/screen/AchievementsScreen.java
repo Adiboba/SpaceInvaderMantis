@@ -72,7 +72,6 @@ public class AchievementsScreen extends Screen {
 	 * Scroll function
 	 */
 	private int scrollOffset;
-
 	/**
 	 * Achievements on each page, in page order.
 	 */
