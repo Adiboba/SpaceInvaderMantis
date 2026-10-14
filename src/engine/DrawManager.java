@@ -114,8 +114,6 @@ public final class DrawManager {
 
 		/** First Flight achievement icon. */
 		FirstFlight,
-		/** Achievement trophy icon. */
-		Trophy,
 		/** Fleet Master achievement icon. */
 		FleetMaster,
 		/** Weakestship sprite. */
@@ -124,10 +122,13 @@ public final class DrawManager {
 		InfinityVoid,
 		/** First Boss Kill achievement icon. */
 		BossKill,
-		/** Accuracy target achievement icon. */
-		Accuracytarget,
+
+		/** Achievement trophy icon. */
+		Trophy,
 		/** Enemies killed achievement icon. */
 		Hunter,
+		/** Accuracy target achievement icon. */
+		Accuracytarget,
         /** Currency collected in one run achievement icon**/
         Looter,
         /** Item used achievement icon. */
@@ -176,12 +177,12 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.Weakestship, new boolean[11][11]);
 			spriteMap.put(SpriteType.InfinityVoid, new boolean[11][11]);
 			spriteMap.put(SpriteType.BossKill, new boolean[11][11]);
-			spriteMap.put(SpriteType.Accuracytarget, new boolean[11][11]);
 			spriteMap.put(SpriteType.Hunter, new boolean[13][12]);
+			spriteMap.put(SpriteType.Trophy, new boolean[11][8]);
+			spriteMap.put(SpriteType.Accuracytarget, new boolean[11][11]);
             spriteMap.put(SpriteType.Looter, new boolean[11][11]);
 			spriteMap.put(SpriteType.ItemCol, new boolean[12][12]);
-			spriteMap.put(SpriteType.ShipFastAttack, new boolean[13][8]);
-			spriteMap.put(SpriteType.ShipBigBullet, new boolean[13][8]);
+
 
 
 			fileManager.loadSprite(spriteMap);
