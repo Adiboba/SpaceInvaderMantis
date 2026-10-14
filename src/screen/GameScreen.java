@@ -201,6 +201,8 @@ public class GameScreen extends Screen {
 	private int bulletsShot;
 	/** Total ships destroyed by the player. */
 	private int shipsDestroyed;
+    /** Total coins collected by the player. */
+    private int coinsCollected;
 	/** Moment the game starts. */
 	private long gameStartTime;
 	/** Checks if the level is finished. */
@@ -218,6 +220,9 @@ public class GameScreen extends Screen {
 	private int prevLives;
 	/** True while the low-life effect is on. */
 	private boolean lowHealthActive;
+
+	/** Whether the player has taken actual damage during this run. */
+	private boolean tookDamage;
 	/** Dims the screen when the player is hit. */
 	private DamageDimEffect damageDim;
 	/** Glitch effect for low health. */
@@ -229,6 +234,8 @@ public class GameScreen extends Screen {
 	/** Diamonds earned this run but not yet cashed out; lost on death,
 	 * banked into DiamondManager only when the player cashes out. */
 	private int pendingDiamonds;
+	/** Levels cleared alive during the current run. */
+	private int levelsCompletedRun;
 	/** Item system of this run (Team CS). Kept across levels by ItemSystem. */
 	private ItemSystem items;
 	/** Item slot keys (1-9) held last frame, so holding a key uses it once. */
@@ -287,6 +294,11 @@ public class GameScreen extends Screen {
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
+		this.levelsCompletedRun = gameState.getLevelsCompletedRun();
+        this.coinsCollected = gameState.getCoinsCollected();
+		this.tookDamage = false;
+
+
 
 		// Snapshot of how the level started, so "Restart" has something to
 		// come back to.
@@ -499,8 +511,11 @@ public class GameScreen extends Screen {
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
+				showUnlockedAchievements(Core.getAchievementManager()
+						.recordFlawlessLevelCompleted(this.tookDamage));
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
+                showUnlockedAchievement(Core.getAchievementManager().recordRunCoins(this.coinsCollected));
 
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(
@@ -519,6 +534,7 @@ public class GameScreen extends Screen {
 				&& this.unlockedAchievement == null
 				&& this.achievementPopupQueue.isEmpty())
 			this.isRunning = false;
+
 	}
 
 	/**
@@ -979,7 +995,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Moves falling coins, hands coins touched by the ship to the
-	 * CurrencyManager, and recycles coins that leave the screen.
+	 * CurrencyManager, updates coins collected in the current run, and recycles coins that leave the screen.
 	 */
 	private void updateCoins() {
 		Set<Coin> recyclable = new HashSet<Coin>();
@@ -988,6 +1004,8 @@ public class GameScreen extends Screen {
 			if (this.lives > 0 && !this.ship.isDestroyed()
 					&& checkCollision(coin, this.ship)) {
 				CurrencyManager.getInstance().addCoins(coin.getValue());
+                this.coinsCollected += coin.getValue();
+
 				recyclable.add(coin);
 				this.logger.info("Coin collected, balance: "
 						+ CurrencyManager.getInstance().getCoins());
@@ -1010,6 +1028,7 @@ public class GameScreen extends Screen {
 		for (Coin coin : this.coins)
 			total += coin.getValue();
 		CurrencyManager.getInstance().addCoins(total);
+        this.coinsCollected += total;
 		this.logger.info("Level cleared, collected " + total
 				+ " remaining coins, balance: "
 				+ CurrencyManager.getInstance().getCoins());
@@ -1048,6 +1067,12 @@ public class GameScreen extends Screen {
 	private void showUnlockedAchievement(final Achievement achievement) {
 		if (achievement != null)
 			this.achievementPopupQueue.add(achievement);
+	}
+
+	/** Queues every achievement unlocked by one completed level. */
+	private void showUnlockedAchievements(
+			final List<Achievement> unlockedAchievements) {
+		this.achievementPopupQueue.addAll(unlockedAchievements);
 	}
 
 	/** Advances the unlock-popup queue without interrupting gameplay. */
@@ -1104,6 +1129,7 @@ public class GameScreen extends Screen {
 	 */
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
-				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds);
+				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds,
+				this.levelsCompletedRun, this.coinsCollected);
 	}
 }

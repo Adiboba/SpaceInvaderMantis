@@ -36,7 +36,7 @@ import item.ItemAPI.*;
  * Level 1 always starts a new run, so forLevel(1) creates a new instance.
  * Call only from the thread that owns game state.
  */
-public final class ItemSystem {
+public final class  ItemSystem {
     /** Drops exist below the HUD separator line (same height as GameScreen's separator). */
     private static final double PLAY_AREA_TOP = 40;
     /** How long a notice stays on screen. */
@@ -404,6 +404,7 @@ public final class ItemSystem {
                 break;
             case ITEM_USED:
                 logger.info("Item used: " + name + " from slot " + (event.slotIndex + 1) + ".");
+                Core.getAchievementManager().recordItemUsed();
                 notice = null; // a "(press N)" hint is outdated once the item is used
                 if (item != null && (item.effectKind == EffectKind.BOOST || item.effectKind == EffectKind.SCORE_BOOST))
                     showNotice(name + " x" + multiplier(item.magnitude));
