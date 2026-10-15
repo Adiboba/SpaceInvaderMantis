@@ -238,13 +238,10 @@ public class GameScreen extends Screen {
 	/** Diamonds earned this run but not yet cashed out; lost on death,
 	 * banked into DiamondManager only when the player cashes out. */
 	private int pendingDiamonds;
-<<<<<<< HEAD
 	/** Levels cleared alive during the current run. */
 	private int levelsCompletedRun;
-=======
 	/** Score boost popups waiting to be shown (Team CS): {due time, x, y, points, bonus ship 1/0}. */
 	private List<long[]> scoreBoostPopups;
->>>>>>> 13fabb84596e1b06b6e7e8227a5b910e9bc8fa10
 	/** Item system of this run (Team CS). Kept across levels by ItemSystem. */
 	private ItemSystem items;
 	/** Item slot keys (1-9) held last frame, so holding a key uses it once. */
