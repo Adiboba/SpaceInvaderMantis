@@ -24,6 +24,7 @@ import engine.DamageDimEffect;
 import engine.GameEvents;
 import engine.GlitchEffect;
 import engine.PurchaseManager;
+import engine.MeteorManager;
 import engine.ScreenShake;
 import engine.PointsEffect;
 import entity.Bullet;
@@ -194,6 +195,10 @@ public class GameScreen extends Screen {
 	private Set<Bullet> bullets;
 	/** Set of coins currently dropped and falling on screen. */
 	private Set<Coin> coins;
+	/** Coins picked up since this level (or its last restart) began. They
+	 * are already banked in CurrencyManager, so a restart has to take them
+	 * back, or restarting would be a free coin farm. */
+	private int coinsCollectedThisLevel;
 	/** Decides, with a low configurable chance, whether a kill drops a
 	 * coin, so currency income doesn't scale 1:1 with kills. */
 	private CoinDropManager coinDropManager;
@@ -233,6 +238,8 @@ public class GameScreen extends Screen {
 	private GlitchEffect glitch;
 	/** Screen shake when an enemy is destroyed. */
 	private ScreenShake screenShake;
+	/** Bonus meteor and its diamonds. AUTHORED BY: VFX TEAM (Effection) */
+	private MeteorManager meteors; 
 	/** Points shown when enemies are destroyed. AUTHORED BY: VFX TEAM (Effection) */
 	private PointsEffect pointsEffect;
 	/** Diamonds earned this run but not yet cashed out; lost on death,
@@ -344,9 +351,11 @@ public class GameScreen extends Screen {
 		GameEvents.subscribe(GameEvents.Type.PLAYER_HIT, this.damageDim);
 		this.glitch = new GlitchEffect();
 		this.screenShake = new ScreenShake();
+		this.meteors = new MeteorManager(this.level, this.width, this.height,SEPARATION_LINE_HEIGHT);
 		this.pointsEffect = new PointsEffect(SEPARATION_LINE_HEIGHT);
 		this.scoreBoostPopups = new ArrayList<long[]>(); // Item System (Team CS)
 		this.coins = new HashSet<Coin>();
+		this.coinsCollectedThisLevel = 0;
 		this.achievementPopupQueue = new LinkedList<Achievement>();
 		this.coinDropManager = new CoinDropManager();
 		this.pauseKeyCooldown = Core.getCooldown(PAUSE_KEY_DEBOUNCE);
@@ -449,9 +458,13 @@ public class GameScreen extends Screen {
 				if (moveLeft && !isLeftBorder) {
 					this.ship.moveLeft();
 				}
-				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
+				if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+					// Count bullets, not trigger pulls: Two Way fires two at
+					// once, and accuracy is kills per bullet.
+					int bulletsBefore = this.bullets.size();
 					if (this.ship.shoot(this.bullets))
-						this.bulletsShot++;
+						this.bulletsShot += this.bullets.size() - bulletsBefore;
+				}
 				useItemSlots(); // Item System (Team CS)
 			}
 
@@ -478,6 +491,7 @@ public class GameScreen extends Screen {
 			if (!this.items.enemiesFrozen()) // Freeze item (Team CS)
 				this.enemyShipFormation.update();
 			this.enemyShipFormation.shoot(this.bullets);
+			this.meteors.trySpawn(this.enemyShipFormation, this.ship); // VFX TEAM (Effection)
 			/**
 			 * AUTHORED BY: VFX TEAM (effection)
 			 *
@@ -496,6 +510,7 @@ public class GameScreen extends Screen {
 		cleanBullets();
 		updateParticles(); // AUTHORED BY: VFX TEAM (Effection)
 		updateCoins();
+		this.pendingDiamonds += this.meteors.update(this.ship, this.lives > 0); // VFX TEAM (Effection): updates the meteor and its diamonds, returns the diamonds to be added to pending
 		handleItemEvents();
 		updateAchievementPopup();
 		draw();
@@ -517,8 +532,10 @@ public class GameScreen extends Screen {
 			// until cashed out (see engine.DiamondManager), and coins still
 			// falling are collected so the last kills' drops aren't lost.
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
+				this.levelsCompletedRun++; // Sharpshooter tiers (Mantis)
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
+				this.pendingDiamonds += this.meteors.collectRemaining(); // VFX TEAM (Effection): collects remaining diamonds from the meteor and adds them to pending
 				showUnlockedAchievements(Core.getAchievementManager()
 						.recordFlawlessLevelCompleted(this.tookDamage));
 				showUnlockedAchievement(Core.getAchievementManager()
@@ -561,6 +578,7 @@ public class GameScreen extends Screen {
 
 		BulletPool.recycle(this.bullets);
 		this.bullets.clear();
+		this.meteors.clear(); // VFX TEAM (Effection):
 
 		// Clears explosions left from enemies shot just before.
 		this.enemyShipFormation.removeDestroyed();
@@ -743,6 +761,8 @@ public class GameScreen extends Screen {
 		this.bulletsShot = this.initialBulletsShot;
 		this.shipsDestroyed = this.initialShipsDestroyed;
 		this.pendingDiamonds = this.initialPendingDiamonds;
+		refundCoinsCollectedThisLevel();
+		this.tookDamage = false; // a restarted level can still be flawless
 		this.levelFinished = false;
 		initialize();
 		this.paused = false;
@@ -793,6 +813,7 @@ public class GameScreen extends Screen {
 			for (Coin coin : this.coins)
 				drawManager.drawCoin(coin, coin.getPositionX(),
 						coin.getPositionY());
+			this.meteors.draw(drawManager); // VFX TEAM (Effection): draws the meteor and its diamonds
 			drawManager.drawItemDrops(this.items); // Item System (Team CS)
 			// HUD must stay still: remove shake offset.
 			drawManager.setWorldOffset(0, 0);
@@ -923,6 +944,7 @@ public class GameScreen extends Screen {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+						this.tookDamage = true; // Survivor tiers (Mantis)
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
 								+ " lives remaining.");
@@ -969,6 +991,9 @@ public class GameScreen extends Screen {
 					this.enemyShipSpecialExplosionCooldown.reset();
 					recyclable.add(bullet);
 				}
+				// Bonus meteor: only player bullets hit it. VFX TEAM (Effection)
+				if (!recyclable.contains(bullet) && this.meteors.tryHit(bullet))
+					recyclable.add(bullet);
 			}
 		this.bullets.removeAll(recyclable);
 		BulletPool.recycle(recyclable);
@@ -1014,8 +1039,8 @@ public class GameScreen extends Screen {
 			if (this.lives > 0 && !this.ship.isDestroyed()
 					&& checkCollision(coin, this.ship)) {
 				CurrencyManager.getInstance().addCoins(coin.getValue());
-                this.coinsCollected += coin.getValue();
-
+				this.coinsCollectedThisLevel += coin.getValue();
+				this.coinsCollected += coin.getValue();
 				recyclable.add(coin);
 				this.logger.info("Coin collected, balance: "
 						+ CurrencyManager.getInstance().getCoins());
@@ -1025,6 +1050,28 @@ public class GameScreen extends Screen {
 		}
 		this.coins.removeAll(recyclable);
 		CoinPool.recycle(recyclable);
+	}
+
+	/**
+	 * Undoes this attempt's coin income when the level is restarted, the
+	 * same way score and pending diamonds go back to their starting values,
+	 * and returns coins still falling to the pool instead of dropping them.
+	 * Never takes more than the current balance, so it can't go negative.
+	 */
+	private void refundCoinsCollectedThisLevel() {
+		CurrencyManager wallet = CurrencyManager.getInstance();
+		int refund = Math.min(this.coinsCollectedThisLevel, wallet.getCoins());
+		if (refund > 0) {
+			wallet.trySpend(refund);
+			this.logger.info("Level restarted, took back " + refund
+					+ " coins, balance: " + wallet.getCoins());
+		}
+		// The restarted level's coins no longer count toward the run total.
+		this.coinsCollected = Math.max(0,
+				this.coinsCollected - this.coinsCollectedThisLevel);
+		this.coinsCollectedThisLevel = 0;
+		CoinPool.recycle(this.coins);
+		this.coins.clear();
 	}
 
 	/**
@@ -1038,7 +1085,8 @@ public class GameScreen extends Screen {
 		for (Coin coin : this.coins)
 			total += coin.getValue();
 		CurrencyManager.getInstance().addCoins(total);
-        this.coinsCollected += total;
+		this.coinsCollectedThisLevel += total;
+		this.coinsCollected += total;
 		this.logger.info("Level cleared, collected " + total
 				+ " remaining coins, balance: "
 				+ CurrencyManager.getInstance().getCoins());
