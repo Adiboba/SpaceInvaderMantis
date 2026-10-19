@@ -8,6 +8,7 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import entity.Ship;
 import screen.AchievementsScreen;
 import screen.CashOutScreen;
 import screen.GameScreen;
@@ -18,6 +19,7 @@ import screen.SettingsScreen;
 import screen.ShopScreen;
 import screen.ShipSelectScreen;
 import screen.TitleScreen;
+import screen.TutorialScreen;
 
 /**
  * Implements core game logic.
@@ -39,29 +41,39 @@ public final class Core {
 	/** Levels between extra life. */
 	private static final int EXTRA_LIFE_FRECUENCY = 3;
 	/** Total number of levels. */
-	private static final int NUM_LEVELS = 7;
+	private static final int NUM_LEVELS = 10;
 	
 	/** Difficulty settings for level 1. */
 	private static final GameSettings SETTINGS_LEVEL_1 =
-			new GameSettings(5, 4, 60, 2000);
+			new GameSettings(5, 2, 60, 2000);
 	/** Difficulty settings for level 2. */
 	private static final GameSettings SETTINGS_LEVEL_2 =
-			new GameSettings(5, 5, 50, 2500);
+			new GameSettings(5, 3, 50, 2500);
 	/** Difficulty settings for level 3. */
 	private static final GameSettings SETTINGS_LEVEL_3 =
-			new GameSettings(6, 5, 40, 1500);
+			new GameSettings(5, 4, 40, 2000);
 	/** Difficulty settings for level 4. */
 	private static final GameSettings SETTINGS_LEVEL_4 =
-			new GameSettings(6, 6, 30, 1500);
+			new GameSettings(6, 4, 30, 1500);
 	/** Difficulty settings for level 5. */
 	private static final GameSettings SETTINGS_LEVEL_5 =
-			new GameSettings(7, 6, 20, 1000);
+			new GameSettings(5, 4, 5, 1000);
 	/** Difficulty settings for level 6. */
 	private static final GameSettings SETTINGS_LEVEL_6 =
-			new GameSettings(7, 7, 10, 1000);
+			new GameSettings(6, 3, 10, 1000);
 	/** Difficulty settings for level 7. */
 	private static final GameSettings SETTINGS_LEVEL_7 =
-			new GameSettings(8, 7, 2, 500);
+			new GameSettings(6, 4, 5, 500);
+	/** Difficulty settings for level 8. */
+	private static final GameSettings SETTINGS_LEVEL_8 =
+			new GameSettings(7, 4, 3, 500);
+	/** Difficulty settings for level 9. */
+	private static final GameSettings SETTINGS_LEVEL_9 =
+			new GameSettings(7, 5, 1, 300);
+	/** Difficulty settings for level 10. */
+	private static final GameSettings SETTINGS_LEVEL_10 =
+			new GameSettings(5, 4, 8, 500);
+
 	
 	/** Frame to draw the screen on. */
 	private static Frame frame;
@@ -78,8 +90,6 @@ public final class Core {
 	private static ConsoleHandler consoleHandler;
 	/** Persistent achievement progress manager. */
 	private static AchievementManager achievementManager;
-	/** Ship used for the current run. Only the starter ship exists for now. */
-	private static String selectedShipId = AchievementManager.STARTER_SHIP_ID;
 
 
 	/**
@@ -120,12 +130,15 @@ public final class Core {
 		gameSettings.add(SETTINGS_LEVEL_5);
 		gameSettings.add(SETTINGS_LEVEL_6);
 		gameSettings.add(SETTINGS_LEVEL_7);
+		gameSettings.add(SETTINGS_LEVEL_8);
+		gameSettings.add(SETTINGS_LEVEL_9);
+		gameSettings.add(SETTINGS_LEVEL_10);
 		
 		GameState gameState;
 
 		int returnCode = 1;
 		do {
-			gameState = new GameState(1, 0, MAX_LIVES, 0, 0);
+			gameState = new GameState(1, 0, MAX_LIVES, 0, 0, 0);
 
 			switch (returnCode) {
 			case 1:
@@ -137,6 +150,12 @@ public final class Core {
 				LOGGER.info("Closing title screen.");
 				break;
 			case 2:
+				// Practice first; ESC returns to the menu without starting a run.
+				currentScreen = new TutorialScreen(width, height, FPS);
+				returnCode = frame.setScreen(currentScreen);
+				if (returnCode != 2) {
+					break;
+				}
 				// Game & score.
 				do {
 					// One extra live every few levels.
@@ -159,7 +178,9 @@ public final class Core {
 							gameState.getLivesRemaining(),
 							gameState.getBulletsShot(),
 							gameState.getShipsDestroyed(),
-							gameState.getPendingDiamonds());
+							gameState.getPendingDiamonds(),
+							gameState.getLevelsCompletedRun(),
+                            gameState.getCoinsCollected());
 
 					gameState = offerCashOut(gameState, width, height);
 
@@ -172,8 +193,9 @@ public final class Core {
 						+ " score screen at " + FPS + " fps, with a score of "
 						+ gameState.getScore() + ", "
 						+ gameState.getLivesRemaining() + " lives remaining, "
-						+ gameState.getBulletsShot() + " bullets shot and "
-						+ gameState.getShipsDestroyed() + " ships destroyed.");
+						+ gameState.getBulletsShot() + " bullets shot, "
+						+ gameState.getShipsDestroyed() + " ships destroyed, and "
+                        + gameState.getCoinsCollected() + " coins collected. ");
 				currentScreen = new ScoreScreen(width, height, FPS, gameState);
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
@@ -269,7 +291,8 @@ public final class Core {
 		// Diamonds were banked by the screen itself.
 		return new GameState(NUM_LEVELS + 1, gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
-				gameState.getShipsDestroyed(), 0);
+				gameState.getShipsDestroyed(), 0,
+				gameState.getLevelsCompletedRun(), gameState.getCoinsCollected());
 	}
 
 	/**
@@ -293,7 +316,8 @@ public final class Core {
 		}
 		return new GameState(gameState.getLevel(), gameState.getScore(),
 				gameState.getLivesRemaining(), gameState.getBulletsShot(),
-				gameState.getShipsDestroyed(), 0);
+				gameState.getShipsDestroyed(), 0,
+				gameState.getLevelsCompletedRun(), gameState.getCoinsCollected());
 	}
 
 	/**
@@ -345,12 +369,73 @@ public final class Core {
 	 * @return Shared achievement manager.
 	 */
 	public static AchievementManager getAchievementManager() {
-		if (achievementManager == null)
+		if (achievementManager == null) {
 			achievementManager = new AchievementManager();
+
+			java.util.Set<String> roster = new java.util.HashSet<String>();
+
+			for (Ship.ShipType type : Ship.ShipType.values()) {
+				roster.add(getShipId(type));
+			}
+
+			achievementManager.configureLevel10Ships(roster);
+		}
+
 		return achievementManager;
 	}
+	/**
+	 * Returns the achievement ID of the selected ship. The standard ship is
+	 * the starter ship; other ships use their lower-case type name.
+	 *
+	 * @return Achievement ID of the selected ship.
+	 */
 	public static String getSelectedShipId() {
-		return selectedShipId;
+		return getShipId(getSelectedShipType());
+	}
+
+	/**
+	 * Returns the stable profile ID for a ship type.
+	 *
+	 * @param type Ship type.
+	 * @return Ship ID used for achievement progress.
+	 */
+	public static String getShipId(final Ship.ShipType type) {
+		switch (type) {
+			case STANDARD:
+				return AchievementManager.STARTER_SHIP_ID;
+			case FAST_MOVE:
+				return "fast_move";
+			case TWO_WAY:
+				return "two_way";
+			case FAST_ATTACK:
+				return "fast_attack";
+			case BIG_BULLET:
+				return "big_bullet";
+			default:
+				throw new IllegalArgumentException("Unknown ship type: " + type);
+		}
+	}
+
+	/**
+	 * Returns the ship type chosen on the Customize screen. It is kept by
+	 * PurchaseManager (GoG), so it is saved between launches and a ship
+	 * that has not been bought falls back to the Standard ship.
+	 *
+	 * @return Selected ship type.
+	 */
+	public static Ship.ShipType getSelectedShipType() {
+		return PurchaseManager.getInstance().getSelectedShip();
+	}
+
+	/**
+	 * Remembers the ship type chosen on the Customize screen. Ships that
+	 * have not been bought in the Shop are ignored (GoG).
+	 *
+	 * @param shipType Ship type to use for the next runs.
+	 */
+	public static void setSelectedShipType(final Ship.ShipType shipType) {
+		if (shipType != null)
+			PurchaseManager.getInstance().selectShip(shipType);
 	}
 	/** @return Number of levels in the game. */
 	public static int getNumLevels() {

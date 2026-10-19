@@ -16,6 +16,7 @@ import java.util.Set;
 import engine.CoinDropManager;
 import engine.Cooldown;
 import engine.Core;
+import engine.DrawManager;
 import engine.CurrencyManager;
 import engine.GameSettings;
 import engine.GameState;
@@ -23,12 +24,18 @@ import engine.Achievement;
 import engine.DamageDimEffect;
 import engine.GameEvents;
 import engine.GlitchEffect;
+import engine.PurchaseManager;
+import engine.MeteorManager;
 import engine.ScreenShake;
+import engine.PointsEffect;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
 import entity.CoinPool;
 import entity.EnemyShip;
+import entity.Boss;
+import entity.MidBoss;
+import entity.FinalBoss;
 import entity.EnemyShipFormation;
 import entity.Entity;
 import entity.Particle;
@@ -96,6 +103,10 @@ public class GameScreen extends Screen {
 	private static final int COIN_VALUE = 1;
 	/** Coins guaranteed when the special bonus ship is destroyed. */
 	private static final int BONUS_COIN_VALUE = 5;
+	/** Delay before the extra score boost popup follows the normal one (ms, Team CS). */
+	private static final int SCORE_BOOST_POPUP_DELAY = 250;
+	/** The extra score boost popup starts this much lower, so the two can be told apart (px, Team CS). */
+	private static final int SCORE_BOOST_POPUP_OFFSET_Y = 14;
 	/** Minimum time between two pause-key toggles, to debounce the key. */
 	private static final int PAUSE_KEY_DEBOUNCE = 200;
 	/** Minimum time between two pause-menu cursor moves. */
@@ -188,6 +199,10 @@ public class GameScreen extends Screen {
 	private Set<Bullet> bullets;
 	/** Set of coins currently dropped and falling on screen. */
 	private Set<Coin> coins;
+	/** Coins picked up since this level (or its last restart) began. They
+	 * are already banked in CurrencyManager, so a restart has to take them
+	 * back, or restarting would be a free coin farm. */
+	private int coinsCollectedThisLevel;
 	/** Decides, with a low configurable chance, whether a kill drops a
 	 * coin, so currency income doesn't scale 1:1 with kills. */
 	private CoinDropManager coinDropManager;
@@ -199,6 +214,8 @@ public class GameScreen extends Screen {
 	private int bulletsShot;
 	/** Total ships destroyed by the player. */
 	private int shipsDestroyed;
+    /** Total coins collected by the player. */
+    private int coinsCollected;
 	/** Moment the game starts. */
 	private long gameStartTime;
 	/** Checks if the level is finished. */
@@ -216,19 +233,32 @@ public class GameScreen extends Screen {
 	private int prevLives;
 	/** True while the low-life effect is on. */
 	private boolean lowHealthActive;
+
+	/** Whether the player has taken actual damage during this run. */
+	private boolean tookDamage;
 	/** Dims the screen when the player is hit. */
 	private DamageDimEffect damageDim;
 	/** Glitch effect for low health. */
 	private GlitchEffect glitch;
 	/** Screen shake when an enemy is destroyed. */
 	private ScreenShake screenShake;
+	/** Bonus meteor and its diamonds. AUTHORED BY: VFX TEAM (Effection) */
+	private MeteorManager meteors;
+	/** Points shown when enemies are destroyed. AUTHORED BY: VFX TEAM (Effection) */
+	private PointsEffect pointsEffect;
 	/** Diamonds earned this run but not yet cashed out; lost on death,
 	 * banked into DiamondManager only when the player cashes out. */
 	private int pendingDiamonds;
+	/** Levels cleared alive during the current run. */
+	private int levelsCompletedRun;
+	/** Score boost popups waiting to be shown (Team CS): {due time, x, y, points, bonus ship 1/0}. */
+	private List<long[]> scoreBoostPopups;
 	/** Item system of this run (Team CS). Kept across levels by ItemSystem. */
 	private ItemSystem items;
 	/** Item slot keys (1-9) held last frame, so holding a key uses it once. */
 	private boolean[] itemSlotKeysHeld = new boolean[9];
+	/** Skin chosen in Customize; animated skins change colour each frame (GoG). */
+	private shop.Skin skin;
 	/** Whether gameplay is currently paused. */
 	private boolean paused;
 	/** Debounces the pause key so holding it doesn't toggle every frame. */
@@ -249,6 +279,9 @@ public class GameScreen extends Screen {
 	private final int initialShipsDestroyed;
 	/** Pending diamonds the level started with, restored by "Restart". */
 	private final int initialPendingDiamonds;
+
+	/** Boss encounter; normal stages use enemyShipFormation instead. */
+	private Boss midBoss;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -281,6 +314,11 @@ public class GameScreen extends Screen {
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 		this.pendingDiamonds = gameState.getPendingDiamonds();
+		this.levelsCompletedRun = gameState.getLevelsCompletedRun();
+        this.coinsCollected = gameState.getCoinsCollected();
+		this.tookDamage = false;
+
+
 
 		// Snapshot of how the level started, so "Restart" has something to
 		// come back to.
@@ -297,9 +335,22 @@ public class GameScreen extends Screen {
 	public final void initialize() {
 		super.initialize();
 
-		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
-		enemyShipFormation.attach(this);
-		this.ship = new Ship(this.width / 2, this.height - 30);
+		// Initialize the player in both boss and normal stages.
+		this.ship = new Ship(this.width / 2, this.height - 30,
+				Core.getSelectedShipType());
+
+		// Distinct mid-boss and final boss encounters.
+		if (this.level == 5 || this.level == 10) {
+			this.midBoss = this.level == 5
+					? new MidBoss(this.width / 2 - 16, 60, DrawManager.SpriteType.MidBoss1)
+					: new FinalBoss(this.width / 2 - 24, 60, DrawManager.SpriteType.FinalBoss1);
+		} else {
+			this.enemyShipFormation = new EnemyShipFormation(this.gameSettings);
+			this.enemyShipFormation.attach(this);
+		}
+		// Skin chosen in Customize (GoG - Currency System).
+		this.skin = PurchaseManager.getInstance().getSelectedSkin();
+		this.ship.setSkinColor(this.skin.getColor());
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
@@ -316,7 +367,11 @@ public class GameScreen extends Screen {
 		GameEvents.subscribe(GameEvents.Type.PLAYER_HIT, this.damageDim);
 		this.glitch = new GlitchEffect();
 		this.screenShake = new ScreenShake();
+		this.meteors = new MeteorManager(this.level, this.width, this.height,SEPARATION_LINE_HEIGHT);
+		this.pointsEffect = new PointsEffect(SEPARATION_LINE_HEIGHT);
+		this.scoreBoostPopups = new ArrayList<long[]>(); // Item System (Team CS)
 		this.coins = new HashSet<Coin>();
+		this.coinsCollectedThisLevel = 0;
 		this.achievementPopupQueue = new LinkedList<Achievement>();
 		this.coinDropManager = new CoinDropManager();
 		this.pauseKeyCooldown = Core.getCooldown(PAUSE_KEY_DEBOUNCE);
@@ -377,9 +432,14 @@ public class GameScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
-		// Item System (Team CS): item bonuses on top of the base fire rate/bullet speed.
-		this.ship.setItemBonuses(this.items.fireRateBonus(),
-				this.items.bulletSpeedBonus());
+		// Item System (Team CS): item bonuses on top of the base fire rate,
+		// bullet speed and movement speed (stacks and the boost item).
+		this.ship.setItemBonuses(
+				this.items.fireRateBonus(this.ship.getBaseFireRate()),
+				this.items.bulletSpeedBonus(),
+				this.items.movementSpeedBonus(this.ship.getBaseSpeed()));
+		// Animated skins (GoG); plain skins return the same colour.
+		this.ship.setSkinColor(this.skin.colorAt(System.currentTimeMillis()));
 
 		if (inputManager.isKeyDown(KeyEvent.VK_P)
 				&& this.pauseKeyCooldown.checkFinished()) {
@@ -414,9 +474,13 @@ public class GameScreen extends Screen {
 				if (moveLeft && !isLeftBorder) {
 					this.ship.moveLeft();
 				}
-				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
+				if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+					// Count bullets, not trigger pulls: Two Way fires two at
+					// once, and accuracy is kills per bullet.
+					int bulletsBefore = this.bullets.size();
 					if (this.ship.shoot(this.bullets))
-						this.bulletsShot++;
+						this.bulletsShot += this.bullets.size() - bulletsBefore;
+				}
 				useItemSlots(); // Item System (Team CS)
 			}
 
@@ -440,14 +504,18 @@ public class GameScreen extends Screen {
 			}
 
 			this.ship.update();
-			if (!this.items.enemiesFrozen()) // Freeze item (Team CS)
-				this.enemyShipFormation.update();
-			this.enemyShipFormation.shoot(this.bullets);
-			/**
-			 * AUTHORED BY: VFX TEAM (effection)
-			 *
-			 * Ship blinks when lives remain 1.
-			 */
+			if (this.midBoss != null) {
+				if (!this.items.enemiesFrozen()) {
+					this.midBoss.update();
+					this.midBoss.moveBoss(this.width, this.height, this.gameSettings);
+				}
+				this.midBoss.shoot(this.bullets, this.gameSettings);
+			} else {
+				if (!this.items.enemiesFrozen())
+					this.enemyShipFormation.update();
+				this.enemyShipFormation.shoot(this.bullets);
+				this.meteors.trySpawn(this.enemyShipFormation, this.ship); // VFX meteor needs a normal formation.
+			}
 			updateLowHealthEffect();
 			this.ship.setBlinking(this.lowHealthActive);
 		}
@@ -457,9 +525,11 @@ public class GameScreen extends Screen {
 				&& !this.levelFinished && this.lives > 0
 				&& !this.ship.isDestroyed());
 		manageCollisions();
+		showScoreBoostPopups(); // Item System (Team CS)
 		cleanBullets();
 		updateParticles(); // AUTHORED BY: VFX TEAM (Effection)
 		updateCoins();
+		this.pendingDiamonds += this.meteors.update(this.ship, this.lives > 0); // VFX TEAM (Effection): updates the meteor and its diamonds, returns the diamonds to be added to pending
 		handleItemEvents();
 		updateAchievementPopup();
 		draw();
@@ -472,7 +542,9 @@ public class GameScreen extends Screen {
 			return;
 		}
 
-		if ((this.enemyShipFormation.isEmpty() || this.lives == 0)
+		boolean isCleared = this.midBoss != null
+				? this.midBoss.isDestroyed() : this.enemyShipFormation.isEmpty();
+		if ((isCleared || this.lives == 0)
 				&& !this.levelFinished) {
 			this.levelFinished = true;
 			this.screenFinishedCooldown.reset();
@@ -480,11 +552,22 @@ public class GameScreen extends Screen {
 			// Level cleared alive: level N is worth N diamonds, kept pending
 			// until cashed out (see engine.DiamondManager), and coins still
 			// falling are collected so the last kills' drops aren't lost.
-			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
+			if (isCleared && this.lives > 0) {
+				this.levelsCompletedRun++; // Sharpshooter tiers (Mantis)
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
+				this.pendingDiamonds += this.meteors.collectRemaining(); // VFX TEAM (Effection): collects remaining diamonds from the meteor and adds them to pending
+				showUnlockedAchievements(Core.getAchievementManager()
+						.recordFlawlessLevelCompleted(this.tookDamage));
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
+                showUnlockedAchievement(Core.getAchievementManager().recordRunCoins(this.coinsCollected));
+
+				showUnlockedAchievement(Core.getAchievementManager()
+						.recordLevelCompleted(
+								this.level,
+								Core.getShipId(this.ship.getType()),
+								true));
 
 				// Last level cleared alive: the game is beaten.
 				if (this.level == Core.getNumLevels())
@@ -497,6 +580,7 @@ public class GameScreen extends Screen {
 				&& this.unlockedAchievement == null
 				&& this.achievementPopupQueue.isEmpty())
 			this.isRunning = false;
+
 	}
 
 	/**
@@ -515,10 +599,14 @@ public class GameScreen extends Screen {
 
 		BulletPool.recycle(this.bullets);
 		this.bullets.clear();
+		this.meteors.clear(); // VFX TEAM (Effection):
 
 		// Clears explosions left from enemies shot just before.
-		this.enemyShipFormation.removeDestroyed();
+		if (this.enemyShipFormation != null)
+			this.enemyShipFormation.removeDestroyed();
 		this.shrinkingEnemies = new LinkedHashMap<EnemyShip, Long>();
+		if (this.midBoss != null)
+			this.midBoss.destroy();
 
 		this.gameOverRowInterval = GAME_OVER_ROW_INTERVAL_START;
 		this.gameOverRowCooldown = Core.getCooldown(GAME_OVER_PAUSE);
@@ -558,7 +646,9 @@ public class GameScreen extends Screen {
 		if (!this.gameOverRowCooldown.checkFinished())
 			return;
 
-		List<EnemyShip> row = this.enemyShipFormation.removeBottomRow();
+		List<EnemyShip> row = this.enemyShipFormation == null
+				? java.util.Collections.<EnemyShip>emptyList()
+				: this.enemyShipFormation.removeBottomRow();
 		if (!row.isEmpty()) {
 			for (EnemyShip enemyShip : row)
 				this.shrinkingEnemies.put(enemyShip, now);
@@ -697,6 +787,8 @@ public class GameScreen extends Screen {
 		this.bulletsShot = this.initialBulletsShot;
 		this.shipsDestroyed = this.initialShipsDestroyed;
 		this.pendingDiamonds = this.initialPendingDiamonds;
+		refundCoinsCollectedThisLevel();
+		this.tookDamage = false; // a restarted level can still be flawless
 		this.levelFinished = false;
 		initialize();
 		this.paused = false;
@@ -725,19 +817,24 @@ public class GameScreen extends Screen {
 						this.enemyShipSpecial.getPositionX(),
 						this.enemyShipSpecial.getPositionY());
 
-			enemyShipFormation.draw();
+if (this.midBoss != null) {
+			drawManager.drawEntity((Entity) this.midBoss, this.midBoss.getPositionX(),
+					this.midBoss.getPositionY());
+		} else {
+			this.enemyShipFormation.draw();
+		}
 
-			// Hit sparkles. AUTHORED BY: VFX TEAM (Effection)
-			for (Particle particle : this.particles)
-				drawManager.drawParticle(particle);
+		// Hit sparkles move with the game world.
+		drawManager.drawParticles(this, this.particles,
+				SEPARATION_LINE_HEIGHT);
 
-			for (Bullet bullet : this.bullets)
-				drawManager.drawEntity(bullet, bullet.getPositionX(),
-						bullet.getPositionY());
-			// Stop shake offset before full-screen dim.
-			drawManager.setWorldOffset(0, 0);
-			// Damage dim (under HUD, so score/lives stay bright). AUTHORED BY: VFX TEAM (Effection)
-			drawManager.drawDamageDim(this, this.damageDim);
+		for (Bullet bullet : this.bullets)
+			drawManager.drawEntity(bullet, bullet.getPositionX(),
+					bullet.getPositionY());
+
+		// Stop shake offset before full-screen dim.
+		drawManager.setWorldOffset(0, 0);
+		drawManager.drawDamageDim(this, this.damageDim);
 
 			// Coins are part of the game world, so they shake too.
 			drawManager.setWorldOffset(this.screenShake.getOffsetX(),
@@ -745,10 +842,14 @@ public class GameScreen extends Screen {
 			for (Coin coin : this.coins)
 				drawManager.drawCoin(coin, coin.getPositionX(),
 						coin.getPositionY());
+			this.meteors.draw(drawManager); // VFX TEAM (Effection): draws the meteor and its diamonds
 			drawManager.drawItemDrops(this.items); // Item System (Team CS)
 			// HUD must stay still: remove shake offset.
 			drawManager.setWorldOffset(0, 0);
 		}
+
+		// Points popups (above the dim, under the HUD). AUTHORED BY: VFX TEAM (Effection)
+		drawManager.drawPointsEffect(this, this.pointsEffect);
 
 		// Interface.
 		drawManager.drawScore(this, this.score);
@@ -812,6 +913,8 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Scatters sparkles from the center of a destroyed ship.
+	 * Must be called BEFORE the ship is destroyed, while its position and
+	 * size are still valid.
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 *
 	 * @param ship
@@ -828,13 +931,18 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Moves the sparkles and removes the ones that faded away.
+	 * Moves the sparkles and removes the ones that faded away or left the
+	 * play area. Called every frame, outside the levelFinished gate, so
+	 * sparkles keep fading after a level ends instead of piling up.
+	 * Removal happens after the update loop, never during iteration.
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 */
 	private void updateParticles() {
 		for (Particle particle : this.particles)
 			particle.update();
-		this.particles.removeIf(Particle::isDead);
+		this.particles.removeIf(particle -> particle.isDead()
+				|| !particle.isInside(0, SEPARATION_LINE_HEIGHT,
+						this.width, this.height));
 	}
 
 	/**
@@ -857,7 +965,7 @@ public class GameScreen extends Screen {
 	 */
 	private void manageCollisions() {
 		Set<Bullet> recyclable = new HashSet<Bullet>();
-		for (Bullet bullet : this.bullets)
+		for (Bullet bullet : this.bullets) {
 			if (bullet.getSpeed() > 0) {
 				if (checkCollision(bullet, this.ship) && !this.levelFinished) {
 					recyclable.add(bullet);
@@ -865,34 +973,64 @@ public class GameScreen extends Screen {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+						this.tookDamage = true; // Survivor tiers (Mantis)
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
 								+ " lives remaining.");
 					}
 				}
 			} else {
-				for (EnemyShip enemyShip : this.enemyShipFormation)
-					if (!enemyShip.isDestroyed()
-							&& checkCollision(bullet, enemyShip)) {
-						this.score += enemyShip.getPointValue();
-						this.shipsDestroyed++;
-						spawnSparkles(enemyShip); // AUTHORED BY: VFX TEAM (Effection)
-						this.enemyShipFormation.destroy(enemyShip);
-						this.screenShake.trigger();
-						maybeDropCoin(enemyShip);
-						this.items.onEnemyDefeated(enemyShip, false);
-						showUnlockedAchievement(Core.getAchievementManager()
-								.recordEnemyDefeated());
+				if (this.level == 5 || this.level == 10) {
+					if (this.midBoss != null
+							&& !this.midBoss.isDestroyed()
+							&& checkCollision(bullet, (Entity) this.midBoss)) {
+						this.score += this.midBoss.manageCollisionsBoss(bullet);
+						if (this.midBoss.isDestroyed()) {
+							this.shipsDestroyed++;
+							this.screenShake.trigger();
+							showUnlockedAchievement(Core.getAchievementManager()
+									.recordBossDefeated());
+							showUnlockedAchievement(Core.getAchievementManager()
+									.recordEnemyDefeated());
+						}
 						recyclable.add(bullet);
 					}
+				} else {
+					for (EnemyShip enemyShip : this.enemyShipFormation) {
+						if (!enemyShip.isDestroyed()
+								&& checkCollision(bullet, enemyShip)) {
+							this.score += this.items.scoreFor(enemyShip.getPointValue());
+							this.shipsDestroyed++;
+							spawnSparkles(enemyShip);
+							this.enemyShipFormation.destroy(enemyShip);
+							this.screenShake.trigger();
+							this.pointsEffect.spawn(
+									enemyShip.getPositionX() + enemyShip.getWidth() / 2,
+									enemyShip.getPositionY() + enemyShip.getHeight() / 2,
+									enemyShip.getPointValue());
+							queueScoreBoostPopup(enemyShip, false); // Item System (Team CS)
+							maybeDropCoin(enemyShip);
+							this.items.onEnemyDefeated(enemyShip, false);
+							showUnlockedAchievement(Core.getAchievementManager()
+									.recordEnemyDefeated());
+							recyclable.add(bullet);
+						}
+					}
+				}
 				if (this.enemyShipSpecial != null
 						&& !this.enemyShipSpecial.isDestroyed()
 						&& checkCollision(bullet, this.enemyShipSpecial)) {
-					this.score += this.enemyShipSpecial.getPointValue();
+					this.score += this.items.scoreFor(this.enemyShipSpecial.getPointValue()); // score boost (Team CS)
 					this.shipsDestroyed++;
 					spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
 					this.enemyShipSpecial.destroy();
 					this.screenShake.trigger();
+					// Bonus points popup. AUTHORED BY: VFX TEAM (Effection)
+					this.pointsEffect.spawnBonus(
+						this.enemyShipSpecial.getPositionX() + this.enemyShipSpecial.getWidth() / 2,
+						this.enemyShipSpecial.getPositionY() + this.enemyShipSpecial.getHeight() / 2,
+						this.enemyShipSpecial.getPointValue());
+					queueScoreBoostPopup(this.enemyShipSpecial, true); // Item System (Team CS)
 					dropCoin(this.enemyShipSpecial, BONUS_COIN_VALUE);
 					this.items.onEnemyDefeated(this.enemyShipSpecial, true);
 					showUnlockedAchievement(Core.getAchievementManager()
@@ -900,7 +1038,11 @@ public class GameScreen extends Screen {
 					this.enemyShipSpecialExplosionCooldown.reset();
 					recyclable.add(bullet);
 				}
+				// Bonus meteor: only player bullets hit it. VFX TEAM (Effection)
+				if (!recyclable.contains(bullet) && this.meteors.tryHit(bullet))
+					recyclable.add(bullet);
 			}
+		}
 		this.bullets.removeAll(recyclable);
 		BulletPool.recycle(recyclable);
 	}
@@ -936,7 +1078,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Moves falling coins, hands coins touched by the ship to the
-	 * CurrencyManager, and recycles coins that leave the screen.
+	 * CurrencyManager, updates coins collected in the current run, and recycles coins that leave the screen.
 	 */
 	private void updateCoins() {
 		Set<Coin> recyclable = new HashSet<Coin>();
@@ -945,6 +1087,8 @@ public class GameScreen extends Screen {
 			if (this.lives > 0 && !this.ship.isDestroyed()
 					&& checkCollision(coin, this.ship)) {
 				CurrencyManager.getInstance().addCoins(coin.getValue());
+				this.coinsCollectedThisLevel += coin.getValue();
+				this.coinsCollected += coin.getValue();
 				recyclable.add(coin);
 				this.logger.info("Coin collected, balance: "
 						+ CurrencyManager.getInstance().getCoins());
@@ -954,6 +1098,28 @@ public class GameScreen extends Screen {
 		}
 		this.coins.removeAll(recyclable);
 		CoinPool.recycle(recyclable);
+	}
+
+	/**
+	 * Undoes this attempt's coin income when the level is restarted, the
+	 * same way score and pending diamonds go back to their starting values,
+	 * and returns coins still falling to the pool instead of dropping them.
+	 * Never takes more than the current balance, so it can't go negative.
+	 */
+	private void refundCoinsCollectedThisLevel() {
+		CurrencyManager wallet = CurrencyManager.getInstance();
+		int refund = Math.min(this.coinsCollectedThisLevel, wallet.getCoins());
+		if (refund > 0) {
+			wallet.trySpend(refund);
+			this.logger.info("Level restarted, took back " + refund
+					+ " coins, balance: " + wallet.getCoins());
+		}
+		// The restarted level's coins no longer count toward the run total.
+		this.coinsCollected = Math.max(0,
+				this.coinsCollected - this.coinsCollectedThisLevel);
+		this.coinsCollectedThisLevel = 0;
+		CoinPool.recycle(this.coins);
+		this.coins.clear();
 	}
 
 	/**
@@ -967,6 +1133,8 @@ public class GameScreen extends Screen {
 		for (Coin coin : this.coins)
 			total += coin.getValue();
 		CurrencyManager.getInstance().addCoins(total);
+		this.coinsCollectedThisLevel += total;
+		this.coinsCollected += total;
 		this.logger.info("Level cleared, collected " + total
 				+ " remaining coins, balance: "
 				+ CurrencyManager.getInstance().getCoins());
@@ -990,6 +1158,48 @@ public class GameScreen extends Screen {
 	}
 
 	/**
+	 * While a score boost is on, the normal points popup shows the base
+	 * points and a second popup with the extra points follows a moment
+	 * later, a little lower (Team CS). The score itself already includes
+	 * the extra points.
+	 *
+	 * @param enemy
+	 *            Enemy that was just destroyed.
+	 * @param bonusShip
+	 *            Whether it is the bonus ship (uses its own popup style).
+	 */
+	private void queueScoreBoostPopup(final EnemyShip enemy,
+			final boolean bonusShip) {
+		int extra = this.items.scoreBonus(enemy.getPointValue());
+		if (extra <= 0)
+			return;
+		this.scoreBoostPopups.add(new long[] {
+				System.currentTimeMillis() + SCORE_BOOST_POPUP_DELAY,
+				enemy.getPositionX() + enemy.getWidth() / 2,
+				enemy.getPositionY() + enemy.getHeight() / 2
+						+ SCORE_BOOST_POPUP_OFFSET_Y, extra,
+				bonusShip ? 1 : 0 });
+	}
+
+	/** Shows the queued score boost popups whose time has come (Team CS). */
+	private void showScoreBoostPopups() {
+		long now = System.currentTimeMillis();
+		Iterator<long[]> iterator = this.scoreBoostPopups.iterator();
+		while (iterator.hasNext()) {
+			long[] popup = iterator.next();
+			if (popup[0] > now)
+				continue;
+			if (popup[4] == 1)
+				this.pointsEffect.spawnBonus((int) popup[1], (int) popup[2],
+						(int) popup[3]);
+			else
+				this.pointsEffect.spawn((int) popup[1], (int) popup[2],
+						(int) popup[3]);
+			iterator.remove();
+		}
+	}
+
+	/**
 	 * Takes this frame's item events (Team CS) so they don't pile up. The
 	 * item system logs them itself; sound and effects can hook in here.
 	 */
@@ -1005,6 +1215,12 @@ public class GameScreen extends Screen {
 	private void showUnlockedAchievement(final Achievement achievement) {
 		if (achievement != null)
 			this.achievementPopupQueue.add(achievement);
+	}
+
+	/** Queues every achievement unlocked by one completed level. */
+	private void showUnlockedAchievements(
+			final List<Achievement> unlockedAchievements) {
+		this.achievementPopupQueue.addAll(unlockedAchievements);
 	}
 
 	/** Advances the unlock-popup queue without interrupting gameplay. */
@@ -1061,6 +1277,7 @@ public class GameScreen extends Screen {
 	 */
 	public final GameState getGameState() {
 		return new GameState(this.level, this.score, this.lives,
-				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds);
+				this.bulletsShot, this.shipsDestroyed, this.pendingDiamonds,
+				this.levelsCompletedRun, this.coinsCollected);
 	}
 }
