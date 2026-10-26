@@ -950,6 +950,9 @@ public class GameScreen extends Screen {
 				.getDiamonds());
 		drawManager.drawHorizontalLine(this, SEPARATION_LINE_HEIGHT - 1);
 		drawManager.drawItemHud(this, this.items); // Item System (Team CS)
+		// Boss health bar: fixed overlay a row below the item HUD slots
+		// (y 43-59, Team CS), so the two never collide.
+		drawManager.drawBossHealthBar(this, this.midBoss, 64);
 		// Low-health glitch (covers game + HUD). AUTHORED BY: VFX TEAM (Effection)
 		this.glitch.setEnabled(this.lowHealthActive && !this.levelFinished);
 		drawManager.drawGlitch(this, this.glitch);
@@ -961,7 +964,7 @@ public class GameScreen extends Screen {
 			drawManager.drawPauseMenu(this, options,
 					this.pauseSelection.ordinal());
 			drawManager.drawKeyHints(this,
-					"w+s / arrows to move, space to select");
+					"w+s / arrows to move, space to select, P to resume");
 		}
 
 		// Countdown to game start (skipped while paused, so the pause menu
@@ -977,6 +980,7 @@ public class GameScreen extends Screen {
 			drawManager.drawHorizontalLine(this, this.height / 2 + this.height
 					/ 12);
 			drawManager.drawItemHint(this, this.items); // Item System (Team CS)
+			drawManager.drawKeyHints(this, "P to pause");
 		}
 
 
