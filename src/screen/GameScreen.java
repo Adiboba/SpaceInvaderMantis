@@ -31,6 +31,8 @@ import engine.PurchaseManager;
 import engine.MeteorManager;
 import engine.ScreenShake;
 import engine.PointsEffect;
+import engine.PlayerSounds;
+import engine.soundEngine.ItemSounds;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -44,6 +46,8 @@ import entity.Entity;
 import entity.Particle;
 import entity.Ship;
 import item.ItemSystem;
+import item.ItemAPI.EventType;
+import item.ItemAPI.ItemEvent;
 
 /**
  * Implements the game screen, where the action happens.
@@ -1064,6 +1068,7 @@ public class GameScreen extends Screen {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+                        PlayerSounds.playHit(this.lives); // <-- Ajout du son
 						this.tookDamage = true; // Survivor tiers (Mantis)
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
@@ -1092,8 +1097,10 @@ public class GameScreen extends Screen {
 								&& checkCollision(bullet, enemyShip)) {
 							recyclable.add(bullet);
 							// Surviving hits consume the bullet without awarding kill rewards.
-							if (!enemyShip.takeDamage(1))
+							if (!enemyShip.takeDamage(1)) {
+								SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
 								continue;
+							}
 							this.score += this.items.scoreFor(enemyShip.getPointValue());
 							this.shipsDestroyed++;
 							spawnSparkles(enemyShip);
@@ -1317,7 +1324,11 @@ public class GameScreen extends Screen {
 	 * item system logs them itself; sound and effects can hook in here.
 	 */
 	private void handleItemEvents() {
-		this.items.drainEvents();
+		for (ItemEvent event : this.items.drainEvents()) {
+			if (event.type == EventType.ITEM_COLLECTED
+					|| event.type == EventType.ITEM_USED)
+				ItemSounds.play(event.itemId);
+		}
 	}
 
 	/**
