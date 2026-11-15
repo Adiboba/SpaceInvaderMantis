@@ -171,7 +171,8 @@ public final class DrawManager {
 		FinalBoss2,
 
         /** Title */
-        Title
+        Title,
+        TitleAlien
 	};
 
 	/**
@@ -237,7 +238,10 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.ShipSkinD1, new boolean[13][8]);
 			spriteMap.put(SpriteType.ShipSkinD2, new boolean[13][8]);
 			spriteMap.put(SpriteType.ShipSkinD3, new boolean[13][8]);
-            spriteMap.put(SpriteType.Title, new boolean[96][16]);
+
+            //Title screen
+            spriteMap.put(SpriteType.Title, new boolean[96][40]);
+            spriteMap.put(SpriteType.TitleAlien, new boolean[96][40]);
 
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
@@ -1029,10 +1033,10 @@ public final class DrawManager {
 	public void drawTitle(final Screen screen) {
         int[] size = getSpriteSize(SpriteType.Title);
         int scale = 4;
-        drawSpriteScaled(SpriteType.Title,
-                (screen.getWidth() - size[0] * scale) / 2,
-                screen.getHeight() / 3 - size[1] * scale,
-                scale, Color.GREEN);
+        int left = (screen.getWidth() - size[0] * scale) / 2;
+        int top = screen.getHeight() / 3 - size[1] * scale;
+        drawSpriteScaled(SpriteType.Title, left, top, scale, Color.GREEN);
+        drawSpriteScaled(SpriteType.TitleAlien, left, top, scale, Color.WHITE);
     }
 
 
