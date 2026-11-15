@@ -22,6 +22,7 @@ import engine.DrawManager;
 import engine.CurrencyManager;
 import engine.GameSettings;
 import engine.GameState;
+import engine.KeyBindings;
 import engine.Achievement;
 import engine.DamageDimEffect;
 import engine.LightningChain;
@@ -278,6 +279,8 @@ public class GameScreen extends Screen {
 	private boolean[] itemSlotKeysHeld = new boolean[9];
 	/** Skin chosen in Customize; animated skins change colour each frame (GoG). */
 	private shop.Skin skin;
+	/** Keys the player chose in Settings for moving, shooting, pause and items. */
+	private final KeyBindings keyBindings = KeyBindings.getInstance();
 	/** Whether gameplay is currently paused. */
 	private boolean paused;
 	/** Wall-clock time when the current pause began. */
@@ -480,7 +483,8 @@ public class GameScreen extends Screen {
 		// Animated skins (GoG); plain skins return the same colour.
 		this.ship.setSkinColor(this.skin.colorAt(System.currentTimeMillis()));
 
-		if (inputManager.isKeyDown(KeyEvent.VK_P)
+		if (inputManager.isKeyDown(
+				this.keyBindings.getKey(KeyBindings.Action.PAUSE))
 				&& this.pauseKeyCooldown.checkFinished()) {
 			if (this.paused)
 				resumeGameplay();
@@ -505,10 +509,10 @@ public class GameScreen extends Screen {
 		if (this.inputDelay.checkFinished() && !this.levelFinished) {
 
 			if (!this.ship.isDestroyed()) {
-				boolean moveRight = inputManager.isKeyDown(KeyEvent.VK_RIGHT)
-						|| inputManager.isKeyDown(KeyEvent.VK_D);
-				boolean moveLeft = inputManager.isKeyDown(KeyEvent.VK_LEFT)
-						|| inputManager.isKeyDown(KeyEvent.VK_A);
+				boolean moveRight = inputManager.isKeyDown(
+						this.keyBindings.getKey(KeyBindings.Action.MOVE_RIGHT));
+				boolean moveLeft = inputManager.isKeyDown(
+						this.keyBindings.getKey(KeyBindings.Action.MOVE_LEFT));
 
 				boolean isRightBorder = this.ship.getPositionX()
 						+ this.ship.getWidth() + this.ship.getSpeed() > this.width - 1;
@@ -521,7 +525,8 @@ public class GameScreen extends Screen {
 				if (moveLeft && !isLeftBorder) {
 					this.ship.moveLeft();
 				}
-				if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+				if (inputManager.isKeyDown(
+						this.keyBindings.getKey(KeyBindings.Action.SHOOT))) {
 					// Count bullets, not trigger pulls: Two Way fires two at
 					// once, and accuracy is kills per bullet.
 					int bulletsBefore = this.bullets.size();
@@ -968,7 +973,9 @@ public class GameScreen extends Screen {
 			drawManager.drawPauseMenu(this, options,
 					this.pauseSelection.ordinal());
 			drawManager.drawKeyHints(this,
-					"w+s / arrows to move, space to select, P to resume");
+					"w+s / arrows to move, space to select, "
+							+ this.keyBindings.keyName(KeyBindings.Action.PAUSE)
+							+ " to resume");
 		}
 
 		// Countdown to game start (skipped while paused, so the pause menu
@@ -984,7 +991,9 @@ public class GameScreen extends Screen {
 			drawManager.drawHorizontalLine(this, this.height / 2 + this.height
 					/ 12);
 			drawManager.drawItemHint(this, this.items); // Item System (Team CS)
-			drawManager.drawKeyHints(this, "P to pause");
+			drawManager.drawKeyHints(this,
+					this.keyBindings.keyName(KeyBindings.Action.PAUSE)
+							+ " to pause");
 		}
 
 
@@ -1263,14 +1272,15 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Uses an item slot when its number key is pressed (Team CS). Key 1 is
-	 * the first slot; holding a key uses the slot only once.
+	 * Uses an item slot when its key is pressed (Team CS). The keys come
+	 * from KeyBindings (1-4 by default); holding a key uses the slot once.
 	 */
 	private void useItemSlots() {
 		int slots = Math.min(this.itemSlotKeysHeld.length,
 				this.items.api().getView().slots.size());
 		for (int slot = 0; slot < slots; slot++) {
-			boolean down = inputManager.isKeyDown(KeyEvent.VK_1 + slot);
+			int key = this.keyBindings.getItemKey(slot);
+			boolean down = key >= 0 && inputManager.isKeyDown(key);
 			if (down && !this.itemSlotKeysHeld[slot])
 				this.items.useSlot(slot);
 			this.itemSlotKeysHeld[slot] = down;
