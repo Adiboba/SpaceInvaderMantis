@@ -824,7 +824,9 @@ public class GameScreen extends Screen {
 				// does takes us straight to the existing score screen,
 				// which already offers "back to menu" / "play again".
 				this.lives = 0;
+                this.returnCode = 1;
 				this.paused = false;
+                this.isRunning = false;
 				break;
 			default:
 				break;
