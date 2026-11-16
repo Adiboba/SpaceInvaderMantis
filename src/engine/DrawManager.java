@@ -993,6 +993,48 @@ public final class DrawManager {
 	}
 
 	/**
+	 * Draws the "Quit to menu?" confirmation over the frozen game (SCRUM-9).
+	 * It uses the same box and colours as the pause menu, with Yes and No
+	 * listed vertically so the pause-menu keys (W/S or arrows) work here too.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param yesSelected
+	 *            Whether the cursor is on Yes (otherwise it is on No).
+	 */
+	public void drawQuitConfirm(final Screen screen,
+								final boolean yesSelected) {
+		String question = "Quit to menu?";
+		String warning = "Progress will be lost";
+		String[] options = { "Yes", "No" };
+		int selectedIndex = yesSelected ? 0 : 1;
+
+		int spacing = menuItemSpacing();
+		int boxWidth = screen.getWidth() * 3 / 4;
+		int boxHeight = spacing * (options.length + 4);
+		int boxX = (screen.getWidth() - boxWidth) / 2;
+		int boxY = (screen.getHeight() - boxHeight) / 2;
+
+		backBufferGraphics.setColor(Color.BLACK);
+		backBufferGraphics.fillRect(boxX, boxY, boxWidth, boxHeight);
+		backBufferGraphics.setColor(Color.GREEN);
+		backBufferGraphics.drawRect(boxX, boxY, boxWidth, boxHeight);
+
+		backBufferGraphics.setColor(Color.GREEN);
+		drawCenteredBigString(screen, question, boxY + spacing * 3 / 2);
+		backBufferGraphics.setColor(Color.WHITE);
+		drawCenteredRegularString(screen, warning, boxY + spacing * 5 / 2);
+
+		for (int i = 0; i < options.length; i++) {
+			boolean selected = i == selectedIndex;
+			String line = (selected ? "> " : " ") + options[i];
+			backBufferGraphics.setColor(selected ? Color.GREEN : Color.WHITE);
+			drawCenteredRegularString(screen, line,
+					boxY + spacing * (i + 4));
+		}
+	}
+
+	/**
 	 * Draws a thick line from side to side of the screen.
 	 *
 	 * @param screen

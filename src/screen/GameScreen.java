@@ -288,6 +288,15 @@ public class GameScreen extends Screen {
 	private Cooldown pauseSelectionCooldown;
 	/** Option the cursor is on in the pause menu. */
 	private PauseOption pauseSelection;
+	/** Whether the "Quit to menu?" confirmation is open (SCRUM-9). */
+	private boolean quitConfirmOpen;
+	/** Whether the cursor is on Yes in the quit confirmation; No otherwise. */
+	private boolean quitConfirmYes;
+	/**
+	 * Set after Space opens or closes the quit confirmation, so the same
+	 * press is not read again as a choice. Cleared once Space is released.
+	 */
+	private boolean waitForSpaceRelease;
 	/** Score the level started with, restored by "Restart". */
 	private final int initialScore;
 	/** Lives the level started with (bonus life included), restored by
@@ -415,6 +424,9 @@ public class GameScreen extends Screen {
 		this.pauseSelectionCooldown = Core.getCooldown(PAUSE_SELECTION_DEBOUNCE);
 		this.pauseSelection = PauseOption.RESUME;
 		this.pauseStartedAt = 0;
+		this.quitConfirmOpen = false;
+		this.quitConfirmYes = false;
+		this.waitForSpaceRelease = false;
 
 		// Item System (Team CS): level 1 starts a new run, later levels keep it.
 		this.items = ItemSystem.forLevel(this.level);
@@ -493,6 +505,7 @@ public class GameScreen extends Screen {
 			if (this.ghostTrail != null)
 				this.ghostTrail.clear();
 			this.pauseSelection = PauseOption.RESUME;
+			this.quitConfirmOpen = false;
 			this.logger.info(this.paused ? "Game paused" : "Game resumed");
 		}
 
@@ -792,6 +805,18 @@ public class GameScreen extends Screen {
 	private void updatePauseMenu() {
 		if (!this.pauseSelectionCooldown.checkFinished())
 			return;
+		// Ignore input until the Space press that opened or closed the
+		// quit confirmation has been released.
+		if (this.waitForSpaceRelease) {
+			if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
+				return;
+			this.waitForSpaceRelease = false;
+		}
+
+		if (this.quitConfirmOpen) {
+			updateQuitConfirm();
+			return;
+		}
 
 		if (inputManager.isKeyDown(KeyEvent.VK_UP)
 				|| inputManager.isKeyDown(KeyEvent.VK_W)) {
@@ -819,18 +844,52 @@ public class GameScreen extends Screen {
 				restartLevel();
 				break;
 			case QUIT:
-				// No dedicated "abandon" path exists in the screen flow,
-				// but ending the run the same way running out of lives
-				// does takes us straight to the existing score screen,
-				// which already offers "back to menu" / "play again".
-				this.lives = 0;
-                this.returnCode = 1;
-				this.paused = false;
-                this.isRunning = false;
+				// SCRUM-9: ask first, so a wrong press doesn't end the run.
+				// The cursor starts on No, the safe answer.
+				this.quitConfirmOpen = true;
+				this.quitConfirmYes = false;
+				this.waitForSpaceRelease = true;
 				break;
 			default:
 				break;
 		}
+	}
+	/**
+	 * Handles input while the "Quit to menu?" confirmation is open. Uses the
+	 * same keys as the pause menu: W/S or the arrow keys move between Yes
+	 * and No, and Space picks the highlighted answer (SCRUM-9).
+	 */
+	private void updateQuitConfirm() {
+		if (inputManager.isKeyDown(KeyEvent.VK_UP)
+				|| inputManager.isKeyDown(KeyEvent.VK_W)
+				|| inputManager.isKeyDown(KeyEvent.VK_DOWN)
+				|| inputManager.isKeyDown(KeyEvent.VK_S)) {
+			// Only two answers, so up and down both switch between them.
+			this.quitConfirmYes = !this.quitConfirmYes;
+			this.pauseSelectionCooldown.reset();
+		} else if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+			this.pauseSelectionCooldown.reset();
+			if (this.quitConfirmYes) {
+				quitToMenu();
+			} else {
+				// No: close the confirmation and show the pause menu again,
+				// with the cursor still on "Quit to menu".
+				this.quitConfirmOpen = false;
+				this.waitForSpaceRelease = true;
+			}
+		}
+	}
+
+	/**
+	 * Ends the run and goes back to the title screen, the same way as
+	 * "Quit to menu" did before the confirmation was added (SCRUM-8).
+	 */
+	private void quitToMenu() {
+		this.quitConfirmOpen = false;
+		this.lives = 0;
+		this.returnCode = 1;
+		this.paused = false;
+		this.isRunning = false;
 	}
 
 	/** Resumes the level without consuming the boss's warning time. */
@@ -964,11 +1023,15 @@ public class GameScreen extends Screen {
 		drawManager.drawGlitch(this, this.glitch);
 
 		if (this.paused) {
-			String[] options = { PauseOption.RESUME.getLabel(),
-					PauseOption.RESTART.getLabel(),
-					PauseOption.QUIT.getLabel() };
-			drawManager.drawPauseMenu(this, options,
-					this.pauseSelection.ordinal());
+			if (this.quitConfirmOpen) {
+				drawManager.drawQuitConfirm(this, this.quitConfirmYes);
+			} else {
+				String[] options = { PauseOption.RESUME.getLabel(),
+						PauseOption.RESTART.getLabel(),
+						PauseOption.QUIT.getLabel() };
+				drawManager.drawPauseMenu(this, options,
+						this.pauseSelection.ordinal());
+			}
 			drawManager.drawKeyHints(this,
 					"w+s / arrows to move, space to select, P to resume");
 		}
