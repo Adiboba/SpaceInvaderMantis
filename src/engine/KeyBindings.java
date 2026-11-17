@@ -63,6 +63,14 @@ public final class KeyBindings {
 	/** Highest key code InputManager keeps track of. */
 	private static final int MAX_KEY_CODE = 255;
 
+	/**
+	 * Keys the pause menu uses to move and select. Pause can't be bound to
+	 * them, or one press would both close the menu and act in it.
+	 */
+	private static final int[] PAUSE_MENU_KEYS = { KeyEvent.VK_SPACE,
+			KeyEvent.VK_ENTER, KeyEvent.VK_W, KeyEvent.VK_S, KeyEvent.VK_UP,
+			KeyEvent.VK_DOWN };
+
 	/** Singleton instance. */
 	private static KeyBindings instance;
 
@@ -161,6 +169,27 @@ public final class KeyBindings {
 	}
 
 	/**
+	 * Tells whether a key may be bound to a specific action. On top of
+	 * isAllowed, Pause can't use a key the pause menu needs.
+	 *
+	 * @param action
+	 *            Action to bind.
+	 * @param keyCode
+	 *            Key code to check.
+	 * @return True if the key can be bound to this action.
+	 */
+	public static boolean isAllowedFor(final Action action,
+			final int keyCode) {
+		if (!isAllowed(keyCode))
+			return false;
+		if (action == Action.PAUSE)
+			for (int menuKey : PAUSE_MENU_KEYS)
+				if (keyCode == menuKey)
+					return false;
+		return true;
+	}
+
+	/**
 	 * Binds a key to an action and saves the bindings. A key that another
 	 * action already uses is rejected, and nothing changes.
 	 *
@@ -171,10 +200,10 @@ public final class KeyBindings {
 	 * @return Null if the key was bound, or the action that already uses
 	 *         the key.
 	 * @throws IllegalArgumentException
-	 *             If the key is not allowed (see isAllowed).
+	 *             If the key is not allowed (see isAllowedFor).
 	 */
 	public Action bind(final Action action, final int keyCode) {
-		if (!isAllowed(keyCode))
+		if (!isAllowedFor(action, keyCode))
 			throw new IllegalArgumentException("Key " + keyCode
 					+ " cannot be bound.");
 		Action owner = findAction(keyCode);
@@ -274,7 +303,7 @@ public final class KeyBindings {
 		Set<Integer> used = new HashSet<Integer>();
 		for (Action action : Action.values()) {
 			Integer key = candidate.get(action);
-			if (key == null || !isAllowed(key) || !used.add(key))
+			if (key == null || !isAllowedFor(action, key) || !used.add(key))
 				return false;
 		}
 		return true;
