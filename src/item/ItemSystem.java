@@ -43,6 +43,8 @@ public final class ItemSystem {
     private static final long NOTICE_MILLIS = 2000;
 
     private static ItemSystem current;
+    /** Set by keepCurrentRun for the next forLevel call only. */
+    private static boolean keepCurrentRun;
 
     /** Balance values of this run (res/item-balance.properties). Read once when the run starts. */
     private final ItemBalance balance;
@@ -87,9 +89,15 @@ public final class ItemSystem {
 
     /** Run instance for the level number. Starts a new run at level 1 or when there is no run. */
     public static ItemSystem forLevel(int level) {
-        if (level <= 1 || current == null) current = new ItemSystem(new Random());
+        // Continue (SCRUM-18) restarts a quit level with the run's items, even level 1.
+        boolean keep = keepCurrentRun && current != null;
+        keepCurrentRun = false;
+        if (!keep && (level <= 1 || current == null)) current = new ItemSystem(new Random());
         return current;
     }
+
+    /** Continue (SCRUM-18): the next forLevel call reuses the current run (slots and run-wide upgrades) instead of starting a new one. */
+    public static void keepCurrentRun() { keepCurrentRun = true; }
 
     /** The current run. May be null outside a run (menus, etc.). */
     public static ItemSystem current() { return current; }

@@ -309,6 +309,10 @@ public class GameScreen extends Screen {
 	private final int initialShipsDestroyed;
 	/** Pending diamonds the level started with, restored by "Restart". */
 	private final int initialPendingDiamonds;
+	/** Levels cleared this run when the level started, for Continue. */
+	private final int initialLevelsCompletedRun;
+	/** Lives when the player chose "Quit to menu", kept for Continue (SCRUM-18). */
+	private int livesAtQuit;
 
 	/** Boss encounter; normal stages use enemyShipFormation instead. */
 	private Boss midBoss;
@@ -357,6 +361,7 @@ public class GameScreen extends Screen {
 		this.initialBulletsShot = this.bulletsShot;
 		this.initialShipsDestroyed = this.shipsDestroyed;
 		this.initialPendingDiamonds = this.pendingDiamonds;
+		this.initialLevelsCompletedRun = this.levelsCompletedRun;
 	}
 
 	/**
@@ -428,7 +433,8 @@ public class GameScreen extends Screen {
 		this.quitConfirmYes = false;
 		this.waitForSpaceRelease = false;
 
-		// Item System (Team CS): level 1 starts a new run, later levels keep it.
+		// Item System (Team CS): level 1 starts a new run, later levels keep
+		// it, and so does Continue (SCRUM-18).
 		this.items = ItemSystem.forLevel(this.level);
 		this.items.beginLevel(this.level, this.width, this.ship,
 				new ItemSystem.GameHooks() {
@@ -881,11 +887,15 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Ends the run and goes back to the title screen, the same way as
-	 * "Quit to menu" did before the confirmation was added (SCRUM-8).
+	 * Leaves the level and goes back to the title screen (SCRUM-8). Core
+	 * keeps the run so it can be continued later (SCRUM-18). Continue
+	 * restarts this level, so the coins picked up in it are taken back, like
+	 * Restart; otherwise every quit and continue would pay them out again.
 	 */
 	private void quitToMenu() {
 		this.quitConfirmOpen = false;
+		refundCoinsCollectedThisLevel();
+		this.livesAtQuit = this.lives;
 		this.lives = 0;
 		this.returnCode = 1;
 		this.paused = false;
@@ -1296,10 +1306,10 @@ public class GameScreen extends Screen {
 		int refund = Math.min(this.coinsCollectedThisLevel, wallet.getCoins());
 		if (refund > 0) {
 			wallet.trySpend(refund);
-			this.logger.info("Level restarted, took back " + refund
-					+ " coins, balance: " + wallet.getCoins());
+			this.logger.info("Took back " + refund
+					+ " coins from this level, balance: " + wallet.getCoins());
 		}
-		// The restarted level's coins no longer count toward the run total.
+		// This level's coins no longer count toward the run total.
 		this.coinsCollected = Math.max(0,
 				this.coinsCollected - this.coinsCollectedThisLevel);
 		this.coinsCollectedThisLevel = 0;
@@ -1457,6 +1467,21 @@ public class GameScreen extends Screen {
 		int distanceY = Math.abs(centerAY - centerBY);
 
 		return distanceX < maxDistanceX && distanceY < maxDistanceY;
+	}
+
+	/**
+	 * State to restart this level with when the player picks Continue
+	 * (SCRUM-18): the lives the player had when quitting, and everything
+	 * else (score, stats, pending diamonds, coins) as the level started, the
+	 * same way Restart resets them.
+	 *
+	 * @return State for SavedRun, with no lives if the player quit with none.
+	 */
+	public final GameState getContinueState() {
+		return new GameState(this.level, this.initialScore, this.livesAtQuit,
+				this.initialBulletsShot, this.initialShipsDestroyed,
+				this.initialPendingDiamonds, this.initialLevelsCompletedRun,
+				this.coinsCollected);
 	}
 
 	/**

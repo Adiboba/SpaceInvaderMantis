@@ -4,6 +4,7 @@ import java.awt.event.KeyEvent;
 
 import engine.Cooldown;
 import engine.Core;
+import engine.SavedRun;
 import engine.soundEngine.MenuSounds;
 import engine.soundEngine.Sound;
 import engine.soundEngine.SoundManager;
@@ -29,6 +30,11 @@ public class TitleScreen extends Screen {
 	private boolean showingExitConfirm;
 	/** Whether the cursor in the confirmation is on Yes. */
 	private boolean exitConfirmYes;
+	/**
+	 * Whether the open confirmation asks to delete the saved run before a
+	 * new one starts (SCRUM-18), instead of asking to close the game.
+	 */
+	private boolean newRunConfirm;
 	/** Whether Escape was held during the previous update. */
 	private boolean escapeWasDown;
 	/** Stars behind the menu, kept between visits so they don't jump. */
@@ -51,8 +57,10 @@ public class TitleScreen extends Screen {
 	public TitleScreen(final int width, final int height, final int fps) {
 		super(width, height, fps);
 
-		// Starts where the cursor was when the menu last closed.
-		this.selected = lastSelected;
+		// Starts where the cursor was when the menu last closed, unless
+		// that item is hidden now (Continue after its run ended).
+		this.selected = lastSelected.isVisible() ? lastSelected
+				: MenuItem.first();
 		this.selectionCooldown = Core.getCooldown(SELECTION_TIME);
 		this.selectionCooldown.reset();
 		this.escapeWasDown = this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
@@ -224,11 +232,18 @@ public class TitleScreen extends Screen {
 	 * Enter or a mouse click - goes through here.
 	 */
 	private void answerExitConfirm() {
-		if (this.exitConfirmYes) {
-			this.returnCode = MenuItem.EXIT.getCode();
-			this.isRunning = false;
-		} else
+		if (!this.exitConfirmYes) {
 			closeExitConfirm();
+			return;
+		}
+		if (this.newRunConfirm) {
+			// Core deletes the saved run when the new run starts.
+			SoundManager.getInstance().stopBgm();
+			lastSelected = MenuItem.PLAY;
+			this.returnCode = MenuItem.PLAY.getCode();
+		} else
+			this.returnCode = MenuItem.EXIT.getCode();
+		this.isRunning = false;
 	}
 
 	/**
@@ -268,8 +283,15 @@ public class TitleScreen extends Screen {
 			return;
 		}
 
+		// A new run deletes the saved one, so ask first (SCRUM-18).
+		if (this.selected == MenuItem.PLAY && SavedRun.exists()) {
+			openConfirm(true);
+			return;
+		}
+
 		// The title music only belongs to the menu, so stop it when a game starts.
-		if (this.selected == MenuItem.PLAY) {
+		if (this.selected == MenuItem.PLAY
+				|| this.selected == MenuItem.CONTINUE) {
 			SoundManager.getInstance().stopBgm();
 		}
 
@@ -291,7 +313,9 @@ public class TitleScreen extends Screen {
 
 		// Drawn last so it sits over the menu.
 		if (this.showingExitConfirm)
-			drawManager.drawExitConfirm(this, this.exitConfirmYes);
+			drawManager.drawExitConfirm(this, this.newRunConfirm
+					? "Delete saved run?" : "Really quit?",
+					this.exitConfirmYes);
 
 		drawManager.completeDrawing(this);
 	}
@@ -300,8 +324,31 @@ public class TitleScreen extends Screen {
 	 * Opens the exit confirmation with No selected.
 	 */
 	private void openExitConfirm() {
+		openConfirm(false);
+	}
+
+	/**
+	 * Opens a Yes / No confirmation with No selected.
+	 *
+	 * @param newRun
+	 *            True to ask about deleting the saved run before a new run,
+	 *            false to ask about closing the game.
+	 */
+	private void openConfirm(final boolean newRun) {
 		this.showingExitConfirm = true;
+		this.newRunConfirm = newRun;
 		this.exitConfirmYes = false;
 		this.selectionCooldown.reset();
+	}
+
+	/**
+	 * Puts the cursor on an item the next time the title screen opens, e.g.
+	 * on Continue right after quitting a run (SCRUM-18).
+	 *
+	 * @param item
+	 *            Item to select.
+	 */
+	public static void selectNextTime(final MenuItem item) {
+		lastSelected = item;
 	}
 }
