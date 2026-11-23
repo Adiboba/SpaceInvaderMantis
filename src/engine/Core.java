@@ -173,9 +173,12 @@ public final class Core {
 							bonusLife, width, height, FPS);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
-					frame.setScreen(currentScreen);
+                    int gameCode = frame.setScreen(currentScreen);
 					LOGGER.info("Closing game screen.");
-
+                    if (gameCode == 1) {
+                        returnCode = 1;
+                        break;
+                    }
 					gameState = ((GameScreen) currentScreen).getGameState();
 
 					gameState = new GameState(gameState.getLevel() + 1,
@@ -191,6 +194,8 @@ public final class Core {
 
 				} while (gameState.getLivesRemaining() > 0
 						&& gameState.getLevel() <= NUM_LEVELS);
+                if (returnCode == 1)
+                    break;
 
 				gameState = settlePendingDiamonds(gameState);
 
