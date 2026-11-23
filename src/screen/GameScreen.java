@@ -15,6 +15,7 @@ import java.util.Set;
 
 import engine.soundEngine.Sound;
 import engine.soundEngine.SoundManager;
+import engine.soundEngine.MenuSounds;
 import engine.CoinDropManager;
 import engine.Cooldown;
 import engine.Core;
@@ -821,10 +822,12 @@ public class GameScreen extends Screen {
 		if (inputManager.isKeyDown(KeyEvent.VK_UP)
 				|| inputManager.isKeyDown(KeyEvent.VK_W)) {
 			this.pauseSelection = this.pauseSelection.previous();
+			MenuSounds.playMove();
 			this.pauseSelectionCooldown.reset();
 		} else if (inputManager.isKeyDown(KeyEvent.VK_DOWN)
 				|| inputManager.isKeyDown(KeyEvent.VK_S)) {
 			this.pauseSelection = this.pauseSelection.next();
+			MenuSounds.playMove();
 			this.pauseSelectionCooldown.reset();
 		} else if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
 			this.pauseSelectionCooldown.reset();
@@ -866,6 +869,7 @@ public class GameScreen extends Screen {
 				|| inputManager.isKeyDown(KeyEvent.VK_S)) {
 			// Only two answers, so up and down both switch between them.
 			this.quitConfirmYes = !this.quitConfirmYes;
+			MenuSounds.playMove();
 			this.pauseSelectionCooldown.reset();
 		} else if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
 			this.pauseSelectionCooldown.reset();
