@@ -604,13 +604,34 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GRAY);
 		drawCenteredRegularString(screen, "Catch item drops with your ship",
 				screen.getHeight() * 2 / 3);
-		drawCenteredRegularString(screen, "Keys 1-" + slots
+		drawCenteredRegularString(screen, "Keys " + itemKeyNames(slots)
 				+ " use stored items", screen.getHeight() * 2 / 3
 				+ fontRegularMetrics.getHeight());
 		ItemAPI.ItemInfo equipped = items.equippedThisRun();
 		if (equipped != null)
 			drawCenteredRegularString(screen, "Equipped: " + equipped.displayName,
 					screen.getHeight() * 2 / 3 + fontRegularMetrics.getHeight() * 2);
+	}
+
+	/**
+	 * Lists the keys bound to the first item slots, e.g. "1/2/3".
+	 *
+	 * @param slots
+	 *            Number of item slots in this run.
+	 * @return Key names separated by slashes.
+	 */
+	private static String itemKeyNames(final int slots) {
+		KeyBindings keys = KeyBindings.getInstance();
+		StringBuilder names = new StringBuilder();
+		for (int slot = 0; slot < slots; slot++) {
+			int key = keys.getItemKey(slot);
+			if (key < 0)
+				break;
+			if (names.length() > 0)
+				names.append('/');
+			names.append(KeyBindings.nameOf(key));
+		}
+		return names.toString();
 	}
 
 	/**

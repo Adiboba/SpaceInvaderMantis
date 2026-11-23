@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,8 @@ public final class FileManager {
 	private static final int MAX_SCORES = 7;
 	/** Name of the file containing persistent player progress. */
 	private static final String PLAYER_PROFILE_FILE = "player-profile";
+	/** Name of the file the player's key bindings are persisted to. */
+	private static final String KEY_BINDINGS_FILE = "key-bindings";
 	/** Name of the file the player's coin balance is persisted to. */
 	private static final String COINS_FILE = "coins";
 	/** Name of the file the player's diamond balance is persisted to. */
@@ -426,6 +429,71 @@ public final class FileManager {
 				.getCodeSource().getLocation().getPath();
 		jarPath = URLDecoder.decode(jarPath, "UTF-8");
 		return new File(new File(jarPath).getParent(), PLAYER_PROFILE_FILE);
+	}
+
+	/**
+	 * Loads the player's key bindings from disk. Lines that are missing or
+	 * not numbers are skipped; KeyBindings fills the gaps with defaults.
+	 *
+	 * @return Saved key per action, empty if nothing was saved yet.
+	 * @throws IOException In case of loading problems.
+	 */
+	public Map<KeyBindings.Action, Integer> loadKeyBindings()
+			throws IOException {
+		Map<KeyBindings.Action, Integer> bindings =
+				new EnumMap<KeyBindings.Action, Integer>(
+						KeyBindings.Action.class);
+		File file = getKeyBindingsFile();
+		if (!file.exists())
+			return bindings;
+
+		try (InputStream inputStream = new FileInputStream(file)) {
+			Properties properties = new Properties();
+			properties.load(inputStream);
+			for (KeyBindings.Action action : KeyBindings.Action.values()) {
+				String value = properties.getProperty(action.name());
+				if (value == null)
+					continue;
+				try {
+					bindings.put(action, Integer.parseInt(value.trim()));
+				} catch (NumberFormatException e) {
+					logger.warning("Ignoring key binding " + action.name()
+							+ "=" + value);
+				}
+			}
+		}
+		return bindings;
+	}
+
+	/**
+	 * Saves the player's key bindings to disk.
+	 *
+	 * @param bindings Key per action.
+	 * @throws IOException In case of saving problems.
+	 */
+	public void saveKeyBindings(final Map<KeyBindings.Action, Integer> bindings)
+			throws IOException {
+		Properties properties = new Properties();
+		for (Map.Entry<KeyBindings.Action, Integer> entry : bindings.entrySet())
+			properties.setProperty(entry.getKey().name(),
+					Integer.toString(entry.getValue()));
+		try (OutputStream outputStream =
+				new FileOutputStream(getKeyBindingsFile())) {
+			properties.store(outputStream, "Space Invaders key bindings");
+			logger.info("Saving key bindings.");
+		}
+	}
+
+	/**
+	 * Returns the file used to persist key bindings, next to the player
+	 * profile.
+	 *
+	 * @return Key bindings file.
+	 * @throws IOException In case the application directory cannot be decoded.
+	 */
+	private File getKeyBindingsFile() throws IOException {
+		return new File(getPlayerProfileFile().getParentFile(),
+				KEY_BINDINGS_FILE);
 	}
 
 	/**
