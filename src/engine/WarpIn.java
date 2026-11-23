@@ -69,6 +69,12 @@ public final class WarpIn {
 		plan(countdownMillis - GO_TIME - (long) (IMPACT * START_DURATION),START_DURATION);
 	}
 
+	/** Keeps the level-start animation aligned with a paused countdown. */
+	public void delayBy(final long pausedMilliseconds) {
+		if (this.startTime >= 0 && pausedMilliseconds > 0)
+			this.startTime += pausedMilliseconds;
+	}
+
 	/** Plans a warp starting in {@code delay} ms, lasting {@code length}. */
 	private void plan(final long delay, final int length) {
 		this.startTime = System.currentTimeMillis() + Math.max(0, delay);
@@ -422,4 +428,3 @@ public final class WarpIn {
 				(int) (a.getBlue() + (b.getBlue() - a.getBlue()) * t));
 	}
 }
-

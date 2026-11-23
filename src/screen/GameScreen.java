@@ -285,6 +285,10 @@ public class GameScreen extends Screen {
 	private boolean paused;
 	/** Wall-clock time when the current pause began. */
 	private long pauseStartedAt;
+	/** Whether the level-start countdown was running when the game paused. */
+	private boolean countdownPaused;
+	/** Space held when pausing must be released before selecting a menu option. */
+	private boolean pauseSpaceReleased;
 	/** Debounces the pause key so holding it doesn't toggle every frame. */
 	private Cooldown pauseKeyCooldown;
 	/** Debounces cursor moves in the pause menu. */
@@ -390,6 +394,7 @@ public class GameScreen extends Screen {
 				.getSelectedShape(this.ship.getType());
 		this.ship.setShapeSprite(shape == null ? null : shape.getSprite());
 		// Appears each 10-30 seconds.
+		this.enemyShipSpecial = null;
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
 		this.enemyShipSpecialCooldown.reset();
@@ -430,6 +435,7 @@ public class GameScreen extends Screen {
 		this.quitConfirmOpen = false;
 		this.quitConfirmYes = false;
 		this.waitForSpaceRelease = false;
+		this.countdownPaused = false;
 
 		// Item System (Team CS): level 1 starts a new run, later levels keep it.
 		this.items = ItemSystem.forLevel(this.level);
@@ -437,7 +443,7 @@ public class GameScreen extends Screen {
 				new ItemSystem.GameHooks() {
 					public int getLives() { return lives; }
 					public void addLife() { lives++; }
-					public void addScore(final int points) { score += points; }
+					public void addScore(final int points) { GameScreen.this.addScore(points); }
 				});
 
 		// Special input delay / countdown.
@@ -475,10 +481,29 @@ public class GameScreen extends Screen {
 		this.items.endLevel(); // Item System (Team CS)
 
 
-		this.score += LIFE_SCORE * (this.lives - 1);
+		awardLifeBonus();
 		this.logger.info("Screen cleared with a score of " + this.score);
 
 		return this.returnCode;
+	}
+
+	/** Awards extra lives without treating a lost life as a penalty. */
+	private void awardLifeBonus() {
+		if (this.lives > 1)
+			addScore((long) LIFE_SCORE * (this.lives - 1));
+	}
+
+	/** Adds earned points without overflowing the score into a negative value. */
+	private void addScore(final long points) {
+		if (points < 0)
+			throw new IllegalArgumentException("Score award must not be negative");
+		long total = this.score + points;
+		if (total > Integer.MAX_VALUE) {
+			this.logger.warning("Score reached the maximum supported value.");
+			this.score = Integer.MAX_VALUE;
+		} else {
+			this.score = (int) total;
+		}
 	}
 
 	/**
@@ -495,26 +520,7 @@ public class GameScreen extends Screen {
 		// Animated skins (GoG); plain skins return the same colour.
 		this.ship.setSkinColor(this.skin.colorAt(System.currentTimeMillis()));
 
-		if (inputManager.isKeyDown(
-				this.keyBindings.getKey(KeyBindings.Action.PAUSE))
-				&& this.pauseKeyCooldown.checkFinished()) {
-			if (this.paused)
-				resumeGameplay();
-			else {
-				this.paused = true;
-				this.pauseStartedAt = System.currentTimeMillis();
-			}
-			this.pauseKeyCooldown.reset();
-			// Ghost Trail starts fresh after a pause. AUTHORED BY: VFX TEAM (Effection)
-			if (this.ghostTrail != null)
-				this.ghostTrail.clear();
-			this.pauseSelection = PauseOption.RESUME;
-			this.quitConfirmOpen = false;
-			this.logger.info(this.paused ? "Game paused" : "Game resumed");
-		}
-
-		if (this.paused) {
-			updatePauseMenu();
+		if (handlePauseInput()) {
 			draw();
 			return;
 		}
@@ -804,10 +810,40 @@ public class GameScreen extends Screen {
 					/ GAME_OVER_FADE_DURATION));
 	}
 
+	/** Returns whether this frame was handled by the pause menu. */
+	private boolean handlePauseInput() {
+		if (inputManager.isKeyDown(
+				this.keyBindings.getKey(KeyBindings.Action.PAUSE))
+				&& this.pauseKeyCooldown.checkFinished()) {
+			if (this.paused)
+				resumeGameplay();
+			else {
+				this.paused = true;
+				this.pauseStartedAt = System.currentTimeMillis();
+				this.countdownPaused = !this.inputDelay.checkFinished();
+				this.pauseSpaceReleased = !inputManager.isKeyDown(KeyEvent.VK_SPACE);
+			}
+			this.pauseKeyCooldown.reset();
+			// Ghost Trail starts fresh after a pause. AUTHORED BY: VFX TEAM (Effection)
+			if (this.ghostTrail != null)
+				this.ghostTrail.clear();
+			this.pauseSelection = PauseOption.RESUME;
+			this.quitConfirmOpen = false;
+			this.logger.info(this.paused ? "Game paused" : "Game resumed");
+		}
+		if (this.paused) {
+			updatePauseMenu();
+			return true;
+		}
+		return false;
+	}
+
 	/**
 	 * Handles cursor movement and selection while the pause menu is open.
 	 */
 	private void updatePauseMenu() {
+		if (!inputManager.isKeyDown(KeyEvent.VK_SPACE))
+			this.pauseSpaceReleased = true;
 		if (!this.pauseSelectionCooldown.checkFinished())
 			return;
 		// Ignore input until the Space press that opened or closed the
@@ -831,7 +867,8 @@ public class GameScreen extends Screen {
 				|| inputManager.isKeyDown(KeyEvent.VK_S)) {
 			this.pauseSelection = this.pauseSelection.next();
 			this.pauseSelectionCooldown.reset();
-		} else if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+		} else if (this.pauseSpaceReleased
+				&& inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
 			this.pauseSelectionCooldown.reset();
 			confirmPauseSelection();
 		}
@@ -897,14 +934,24 @@ public class GameScreen extends Screen {
 		this.isRunning = false;
 	}
 
-	/** Resumes the level without consuming the boss's warning time. */
+	/** Resumes the level without consuming paused cooldown time. */
 	private void resumeGameplay() {
-		if (this.paused && this.midBoss instanceof FinalBoss) {
-			((FinalBoss) this.midBoss).resumeAfterPause(
-					System.currentTimeMillis() - this.pauseStartedAt);
+		if (this.paused) {
+			long pausedMilliseconds = System.currentTimeMillis() - this.pauseStartedAt;
+			this.ship.resumeAfterPause(pausedMilliseconds);
+			if (this.countdownPaused) {
+				this.inputDelay.delayBy(pausedMilliseconds);
+				this.gameStartTime += pausedMilliseconds;
+				this.enemyShipSpecialCooldown.delayBy(pausedMilliseconds);
+				if (this.warpIn != null)
+					this.warpIn.delayBy(pausedMilliseconds);
+			}
+			if (this.midBoss instanceof FinalBoss)
+				((FinalBoss) this.midBoss).resumeAfterPause(pausedMilliseconds);
 		}
 		this.paused = false;
 		this.pauseStartedAt = 0;
+		this.countdownPaused = false;
 	}
 
 	/**
@@ -1154,7 +1201,7 @@ public class GameScreen extends Screen {
 					if (this.midBoss != null
 							&& !this.midBoss.isDestroyed()
 							&& checkCollision(bullet, (Entity) this.midBoss)) {
-						this.score += this.midBoss.manageCollisionsBoss(bullet);
+						addScore(this.midBoss.manageCollisionsBoss(bullet));
 						if (this.midBoss.isDestroyed()) {
 							this.shipsDestroyed++;
 							this.screenShake.trigger();
@@ -1175,7 +1222,7 @@ public class GameScreen extends Screen {
 								SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
 								continue;
 							}
-							this.score += this.items.scoreFor(enemyShip.getPointValue());
+							addScore(this.items.scoreFor(enemyShip.getPointValue()));
 							this.shipsDestroyed++;
 							spawnSparkles(enemyShip);
 							this.enemyShipFormation.destroy(enemyShip);
@@ -1201,7 +1248,7 @@ public class GameScreen extends Screen {
 				if (this.enemyShipSpecial != null
 						&& !this.enemyShipSpecial.isDestroyed()
 						&& checkCollision(bullet, this.enemyShipSpecial)) {
-					this.score += this.items.scoreFor(this.enemyShipSpecial.getPointValue()); // score boost (Team CS)
+					addScore(this.items.scoreFor(this.enemyShipSpecial.getPointValue())); // score boost (Team CS)
 					this.shipsDestroyed++;
 					spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
 					this.enemyShipSpecial.destroy();
