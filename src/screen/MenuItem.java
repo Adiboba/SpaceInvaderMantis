@@ -1,5 +1,11 @@
 package screen;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import engine.SavedRun;
+
 /**
  * Items of the main menu.
  *
@@ -15,6 +21,9 @@ package screen;
 public enum MenuItem {
 
 	/** Starts the game. */
+	/** Continues the run left with "Quit to menu" (SCRUM-18); only shown while one is saved. */
+	CONTINUE("Continue", 8, true),
+
 	PLAY("Play", 2, true),
 	/** Customize screen (ship selection). */
 	SHIP_SELECT("Customize", 7, true),
@@ -85,7 +94,32 @@ public enum MenuItem {
 	 * @return Topmost item.
 	 */
 	public static MenuItem first() {
-		return values()[0];
+		return visibleValues()[0];
+	}
+
+	/**
+	 * Tells whether the item is on the menu right now. Continue only shows
+	 * while a run is saved (SCRUM-18).
+	 *
+	 * @return True if the item is shown.
+	 */
+	public final boolean isVisible() {
+		return this != CONTINUE || SavedRun.exists();
+	}
+
+	/**
+	 * Items on the menu right now, top to bottom. Drawing, clicking and
+	 * moving the cursor all go through this, so hidden items are skipped
+	 * everywhere.
+	 *
+	 * @return Shown items, in menu order.
+	 */
+	public static MenuItem[] visibleValues() {
+		List<MenuItem> visible = new ArrayList<MenuItem>();
+		for (MenuItem item : values())
+			if (item.isVisible())
+				visible.add(item);
+		return visible.toArray(new MenuItem[visible.size()]);
 	}
 
 	/**
@@ -115,7 +149,10 @@ public enum MenuItem {
 	 * @return Item one place away in that direction.
 	 */
 	private MenuItem step(final int direction) {
-		MenuItem[] items = values();
-		return items[Math.floorMod(this.ordinal() + direction, items.length)];
+		MenuItem[] items = visibleValues();
+		int index = Arrays.asList(items).indexOf(this);
+		if (index < 0)
+			return items[0];
+		return items[Math.floorMod(index + direction, items.length)];
 	}
 }

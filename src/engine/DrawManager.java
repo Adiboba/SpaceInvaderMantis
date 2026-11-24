@@ -1026,7 +1026,9 @@ public final class DrawManager {
 	public void drawQuitConfirm(final Screen screen,
 								final boolean yesSelected) {
 		String question = "Quit to menu?";
-		String warning = "Progress will be lost";
+		// Continue (SCRUM-18) restarts the quit level, so only this level's
+		// progress is lost, not the run.
+		String warning = "Level progress will be lost";
 		String[] options = { "Yes", "No" };
 		int selectedIndex = yesSelected ? 0 : 1;
 
@@ -1093,10 +1095,11 @@ public final class DrawManager {
 	 *            Item the cursor is on.
 	 */
 	public void drawMenu(final Screen screen, final MenuItem selected) {
-		for (MenuItem item : MenuItem.values())
-			drawMenuRow(screen, item.getTitle(),
-					menuItemBaseline(screen, item.ordinal()),
-					item == selected, item.isEnabled());
+		MenuItem[] items = MenuItem.visibleValues();
+		for (int i = 0; i < items.length; i++)
+			drawMenuRow(screen, items[i].getTitle(),
+					menuItemBaseline(screen, i, items.length),
+					items[i] == selected, items[i].isEnabled());
 	}
 
 	/**
@@ -1115,10 +1118,11 @@ public final class DrawManager {
 		if (fontRegularMetrics == null)
 			return null;
 		int spacing = menuItemSpacing();
-		for (MenuItem item : MenuItem.values()) {
-			if (isOnMenuRow(menuItemBaseline(screen, item.ordinal()),
+		MenuItem[] items = MenuItem.visibleValues();
+		for (int i = 0; i < items.length; i++) {
+			if (isOnMenuRow(menuItemBaseline(screen, i, items.length),
 					spacing, positionY))
-				return item;
+				return items[i];
 		}
 		return null;
 	}
@@ -1148,6 +1152,9 @@ public final class DrawManager {
 		return positionY >= top && positionY < top + rowHeight;
 	}
 
+	/** Row of the last menu item, in item spacings below the middle. */
+	private static final int LAST_MENU_ROW = 8;
+
 	/**
 	 * Height of the baseline of a menu item. Drawing and hit-testing both use
 	 * this, so they cannot drift apart.
@@ -1156,10 +1163,17 @@ public final class DrawManager {
 	 *            Screen the menu is drawn on.
 	 * @param index
 	 *            Position of the item in the menu, from the top.
+	 * @param count
+	 *            Number of items on the menu right now.
 	 * @return Baseline of the item's text.
 	 */
-	private int menuItemBaseline(final Screen screen, final int index) {
-		return screen.getHeight() / 2 + menuItemSpacing() * (index + 2);
+	private int menuItemBaseline(final Screen screen, final int index,
+			final int count) {
+		// The last row stays put, so an extra row (Continue, SCRUM-18)
+		// grows the menu upwards instead of into the key hints.
+		int rowsBelow = count - 1 - index;
+		return screen.getHeight() / 2
+				+ menuItemSpacing() * (LAST_MENU_ROW - rowsBelow);
 	}
 
 	/**
@@ -1208,7 +1222,22 @@ public final class DrawManager {
 	 */
 	public void drawExitConfirm(final Screen screen,
 								final boolean yesSelected) {
-		String question = "Really quit?";
+		drawExitConfirm(screen, "Really quit?", yesSelected);
+	}
+
+	/**
+	 * Draws a Yes / No confirmation over the menu, in the same box as the
+	 * exit confirmation, with a different question.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param question
+	 *            Question shown above Yes and No.
+	 * @param yesSelected
+	 *            Whether the cursor is on Yes.
+	 */
+	public void drawExitConfirm(final Screen screen, final String question,
+								final boolean yesSelected) {
 		String yesString = "Yes";
 		String noString = "No";
 
