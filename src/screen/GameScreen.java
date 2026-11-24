@@ -23,6 +23,7 @@ import engine.DrawManager;
 import engine.CurrencyManager;
 import engine.GameSettings;
 import engine.GameState;
+import engine.KeyBindings;
 import engine.Achievement;
 import engine.DamageDimEffect;
 import engine.LightningChain;
@@ -279,6 +280,8 @@ public class GameScreen extends Screen {
 	private boolean[] itemSlotKeysHeld = new boolean[9];
 	/** Skin chosen in Customize; animated skins change colour each frame (GoG). */
 	private shop.Skin skin;
+	/** Keys the player chose in Settings for moving, shooting, pause and items. */
+	private final KeyBindings keyBindings = KeyBindings.getInstance();
 	/** Whether gameplay is currently paused. */
 	private boolean paused;
 	/** Wall-clock time when the current pause began. */
@@ -310,6 +313,10 @@ public class GameScreen extends Screen {
 	private final int initialShipsDestroyed;
 	/** Pending diamonds the level started with, restored by "Restart". */
 	private final int initialPendingDiamonds;
+	/** Levels cleared this run when the level started, for Continue. */
+	private final int initialLevelsCompletedRun;
+	/** Lives when the player chose "Quit to menu", kept for Continue (SCRUM-18). */
+	private int livesAtQuit;
 
 	/** Boss encounter; normal stages use enemyShipFormation instead. */
 	private Boss midBoss;
@@ -358,6 +365,7 @@ public class GameScreen extends Screen {
 		this.initialBulletsShot = this.bulletsShot;
 		this.initialShipsDestroyed = this.shipsDestroyed;
 		this.initialPendingDiamonds = this.pendingDiamonds;
+		this.initialLevelsCompletedRun = this.levelsCompletedRun;
 	}
 
 	/**
@@ -429,7 +437,8 @@ public class GameScreen extends Screen {
 		this.quitConfirmYes = false;
 		this.waitForSpaceRelease = false;
 
-		// Item System (Team CS): level 1 starts a new run, later levels keep it.
+		// Item System (Team CS): level 1 starts a new run, later levels keep
+		// it, and so does Continue (SCRUM-18).
 		this.items = ItemSystem.forLevel(this.level);
 		this.items.beginLevel(this.level, this.width, this.ship,
 				new ItemSystem.GameHooks() {
@@ -493,7 +502,8 @@ public class GameScreen extends Screen {
 		// Animated skins (GoG); plain skins return the same colour.
 		this.ship.setSkinColor(this.skin.colorAt(System.currentTimeMillis()));
 
-		if (inputManager.isKeyDown(KeyEvent.VK_P)
+		if (inputManager.isKeyDown(
+				this.keyBindings.getKey(KeyBindings.Action.PAUSE))
 				&& this.pauseKeyCooldown.checkFinished()) {
 			if (this.paused)
 				resumeGameplay();
@@ -519,10 +529,10 @@ public class GameScreen extends Screen {
 		if (this.inputDelay.checkFinished() && !this.levelFinished) {
 
 			if (!this.ship.isDestroyed()) {
-				boolean moveRight = inputManager.isKeyDown(KeyEvent.VK_RIGHT)
-						|| inputManager.isKeyDown(KeyEvent.VK_D);
-				boolean moveLeft = inputManager.isKeyDown(KeyEvent.VK_LEFT)
-						|| inputManager.isKeyDown(KeyEvent.VK_A);
+				boolean moveRight = inputManager.isKeyDown(
+						this.keyBindings.getKey(KeyBindings.Action.MOVE_RIGHT));
+				boolean moveLeft = inputManager.isKeyDown(
+						this.keyBindings.getKey(KeyBindings.Action.MOVE_LEFT));
 
 				boolean isRightBorder = this.ship.getPositionX()
 						+ this.ship.getWidth() + this.ship.getSpeed() > this.width - 1;
@@ -535,7 +545,8 @@ public class GameScreen extends Screen {
 				if (moveLeft && !isLeftBorder) {
 					this.ship.moveLeft();
 				}
-				if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+				if (inputManager.isKeyDown(
+						this.keyBindings.getKey(KeyBindings.Action.SHOOT))) {
 					// Count bullets, not trigger pulls: Two Way fires two at
 					// once, and accuracy is kills per bullet.
 					int bulletsBefore = this.bullets.size();
@@ -885,11 +896,15 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Ends the run and goes back to the title screen, the same way as
-	 * "Quit to menu" did before the confirmation was added (SCRUM-8).
+	 * Leaves the level and goes back to the title screen (SCRUM-8). Core
+	 * keeps the run so it can be continued later (SCRUM-18). Continue
+	 * restarts this level, so the coins picked up in it are taken back, like
+	 * Restart; otherwise every quit and continue would pay them out again.
 	 */
 	private void quitToMenu() {
 		this.quitConfirmOpen = false;
+		refundCoinsCollectedThisLevel();
+		this.livesAtQuit = this.lives;
 		this.lives = 0;
 		this.returnCode = 1;
 		this.paused = false;
@@ -1037,7 +1052,9 @@ public class GameScreen extends Screen {
 						this.pauseSelection.ordinal());
 			}
 			drawManager.drawKeyHints(this,
-					"w+s / arrows to move, space to select, P to resume");
+					"w+s / arrows to move, space to select, "
+							+ this.keyBindings.keyName(KeyBindings.Action.PAUSE)
+							+ " to resume");
 		}
 
 		// Countdown to game start (skipped while paused, so the pause menu
@@ -1053,7 +1070,9 @@ public class GameScreen extends Screen {
 			drawManager.drawHorizontalLine(this, this.height / 2 + this.height
 					/ 12);
 			drawManager.drawItemHint(this, this.items); // Item System (Team CS)
-			drawManager.drawKeyHints(this, "P to pause");
+			drawManager.drawKeyHints(this,
+					this.keyBindings.keyName(KeyBindings.Action.PAUSE)
+							+ " to pause");
 		}
 
 
@@ -1300,10 +1319,10 @@ public class GameScreen extends Screen {
 		int refund = Math.min(this.coinsCollectedThisLevel, wallet.getCoins());
 		if (refund > 0) {
 			wallet.trySpend(refund);
-			this.logger.info("Level restarted, took back " + refund
-					+ " coins, balance: " + wallet.getCoins());
+			this.logger.info("Took back " + refund
+					+ " coins from this level, balance: " + wallet.getCoins());
 		}
-		// The restarted level's coins no longer count toward the run total.
+		// This level's coins no longer count toward the run total.
 		this.coinsCollected = Math.max(0,
 				this.coinsCollected - this.coinsCollectedThisLevel);
 		this.coinsCollectedThisLevel = 0;
@@ -1332,14 +1351,15 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Uses an item slot when its number key is pressed (Team CS). Key 1 is
-	 * the first slot; holding a key uses the slot only once.
+	 * Uses an item slot when its key is pressed (Team CS). The keys come
+	 * from KeyBindings (1-4 by default); holding a key uses the slot once.
 	 */
 	private void useItemSlots() {
 		int slots = Math.min(this.itemSlotKeysHeld.length,
 				this.items.api().getView().slots.size());
 		for (int slot = 0; slot < slots; slot++) {
-			boolean down = inputManager.isKeyDown(KeyEvent.VK_1 + slot);
+			int key = this.keyBindings.getItemKey(slot);
+			boolean down = key >= 0 && inputManager.isKeyDown(key);
 			if (down && !this.itemSlotKeysHeld[slot])
 				this.items.useSlot(slot);
 			this.itemSlotKeysHeld[slot] = down;
@@ -1461,6 +1481,21 @@ public class GameScreen extends Screen {
 		int distanceY = Math.abs(centerAY - centerBY);
 
 		return distanceX < maxDistanceX && distanceY < maxDistanceY;
+	}
+
+	/**
+	 * State to restart this level with when the player picks Continue
+	 * (SCRUM-18): the lives the player had when quitting, and everything
+	 * else (score, stats, pending diamonds, coins) as the level started, the
+	 * same way Restart resets them.
+	 *
+	 * @return State for SavedRun, with no lives if the player quit with none.
+	 */
+	public final GameState getContinueState() {
+		return new GameState(this.level, this.initialScore, this.livesAtQuit,
+				this.initialBulletsShot, this.initialShipsDestroyed,
+				this.initialPendingDiamonds, this.initialLevelsCompletedRun,
+				this.coinsCollected);
 	}
 
 	/**

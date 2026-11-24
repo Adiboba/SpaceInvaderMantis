@@ -9,10 +9,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import entity.Ship;
+import item.ItemSystem;
 import screen.AchievementsScreen;
 import screen.CashOutScreen;
 import screen.GameScreen;
 import screen.HighScoreScreen;
+import screen.MenuItem;
 import screen.ScoreScreen;
 import screen.Screen;
 import screen.SettingsScreen;
@@ -153,20 +155,44 @@ public final class Core {
 				LOGGER.info("Closing title screen.");
 				break;
 			case 2:
-				// Practice first; ESC returns to the menu without starting a run.
-				if (startLevel == 1) {
-					currentScreen = new TutorialScreen(width, height, FPS);
-					returnCode = frame.setScreen(currentScreen);
-					if (returnCode != 2) {
+			case 8:
+				// 2 starts a new run; 8 continues the run left with
+				// "Quit to menu" (SCRUM-18).
+				boolean continuing = returnCode == 8;
+				if (continuing) {
+					GameState saved = SavedRun.take();
+					if (saved == null) {
+						returnCode = 1;
 						break;
+					}
+					gameState = saved;
+					// The quit level restarts with the run's items.
+					ItemSystem.keepCurrentRun();
+				} else {
+					// A new run replaces the saved one; the title screen
+					// asked first.
+					SavedRun.clear();
+					// Practice first; ESC returns to the menu without
+					// starting a run.
+					if (startLevel == 1) {
+						currentScreen = new TutorialScreen(width, height, FPS);
+						returnCode = frame.setScreen(currentScreen);
+						if (returnCode != 2) {
+							break;
+						}
 					}
 				}
 				// Game & score.
+				boolean restartingQuitLevel = continuing;
 				do {
-					// One extra live every few levels.
-					boolean bonusLife = gameState.getLevel()
+					// One extra live every few levels, but not again when
+					// Continue restarts the level it was already given on,
+					// or quitting and continuing would farm lives.
+					boolean bonusLife = !restartingQuitLevel
+							&& gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
 							&& gameState.getLivesRemaining() < MAX_LIVES;
+					restartingQuitLevel = false;
 					
 					currentScreen = new GameScreen(gameState,
 							gameSettings.get(gameState.getLevel() - 1),
@@ -176,6 +202,14 @@ public final class Core {
                     int gameCode = frame.setScreen(currentScreen);
 					LOGGER.info("Closing game screen.");
                     if (gameCode == 1) {
+                        // Quit to menu: keep the run for Continue (SCRUM-18),
+                        // unless there were no lives left to continue with.
+                        GameState quitState = ((GameScreen) currentScreen)
+                                .getContinueState();
+                        if (quitState.getLivesRemaining() > 0) {
+                            SavedRun.save(quitState);
+                            TitleScreen.selectNextTime(MenuItem.CONTINUE);
+                        }
                         returnCode = 1;
                         break;
                     }
