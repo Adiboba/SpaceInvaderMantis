@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import engine.DrawManager.SpriteType;
+import engine.KeyBindings;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.EnemyShip;
@@ -83,10 +84,11 @@ public final class TutorialScreen extends Screen {
 
     private void updatePractice() {
         int oldX = ship.getPositionX();
-        boolean left = inputManager.isKeyDown(KeyEvent.VK_LEFT)
-                || inputManager.isKeyDown(KeyEvent.VK_A);
-        boolean right = inputManager.isKeyDown(KeyEvent.VK_RIGHT)
-                || inputManager.isKeyDown(KeyEvent.VK_D);
+        KeyBindings keys = KeyBindings.getInstance();
+        boolean left = inputManager.isKeyDown(
+                keys.getKey(KeyBindings.Action.MOVE_LEFT));
+        boolean right = inputManager.isKeyDown(
+                keys.getKey(KeyBindings.Action.MOVE_RIGHT));
         if (left && !right && oldX - ship.getSpeed() >= 1) {
             ship.moveLeft();
         } else if (right && !left
@@ -99,7 +101,8 @@ public final class TutorialScreen extends Screen {
             enemy = new EnemyShip(width / 2 - 12, height / 2,
                     SpriteType.EnemyShipA1);
         }
-        if (step != Step.MOVE && inputManager.isKeyDown(KeyEvent.VK_SPACE)
+        if (step != Step.MOVE
+                && inputManager.isKeyDown(keys.getKey(KeyBindings.Action.SHOOT))
                 && ship.shoot(bullets)) {
             step = Step.DEFEAT;
         }
@@ -142,10 +145,15 @@ public final class TutorialScreen extends Screen {
         String instruction;
         switch (step) {
         case MOVE:
-            instruction = "1/3  Move: A/D or LEFT/RIGHT";
+            instruction = "1/3  Move: "
+                    + KeyBindings.getInstance().keyName(KeyBindings.Action.MOVE_LEFT)
+                    + "/"
+                    + KeyBindings.getInstance().keyName(KeyBindings.Action.MOVE_RIGHT);
             break;
         case SHOOT:
-            instruction = "2/3  Press SPACE to fire";
+            instruction = "2/3  Press "
+                    + KeyBindings.getInstance().keyName(KeyBindings.Action.SHOOT)
+                    + " to fire";
             break;
         case DEFEAT:
             instruction = "3/3  Defeat the practice enemy";

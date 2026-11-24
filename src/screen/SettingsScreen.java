@@ -2,6 +2,7 @@ package screen;
 
 import engine.Cooldown;
 import engine.Core;
+import engine.KeyBindings;
 import java.awt.event.KeyEvent;
 import java.awt.Color;
 import engine.soundEngine.Sound;
@@ -28,6 +29,40 @@ public class SettingsScreen extends Screen {
 	/** Whether the left mouse button was pressed on the previous frame. */
 	private boolean mouseWasPressed;
 
+	/** Rows on the main page: BGM slider, SFX slider, Controls. */
+	private static final int MAIN_ROWS = 3;
+	/** Main-page row that opens the Controls page. */
+	private static final int CONTROLS_ROW = 2;
+	/** Actions listed on the Controls page, in order. */
+	private static final KeyBindings.Action[] ACTIONS =
+			KeyBindings.Action.values();
+	/** Controls-page row below the actions that resets every key. */
+	private static final int RESET_ROW = ACTIONS.length;
+	/** Vertical distance between rows on the Controls page. */
+	private static final int CONTROL_ROW_SPACING = 30;
+	/** How long a Controls-page message stays on screen, in ms. */
+	private static final int MESSAGE_TIME = 2000;
+	/** Highest key code the screen looks at when waiting for a key. */
+	private static final int MAX_KEY_CODE = 255;
+
+	/** Keys the player chose for gameplay (SCRUM-19). */
+	private final KeyBindings keyBindings = KeyBindings.getInstance();
+	/** Whether the Controls page is shown instead of the main page. */
+	private boolean controlsPage;
+	/** Selected row on the Controls page: an action, or RESET_ROW. */
+	private int controlsSelection;
+	/** Action waiting for its new key, or null when not rebinding. */
+	private KeyBindings.Action waitingFor;
+	/**
+	 * Set after a page change or a key choice, so the same press isn't read
+	 * twice. Input is ignored until every key is released.
+	 */
+	private boolean waitForRelease;
+	/** Result of the last change on the Controls page. */
+	private String message = "";
+	/** Time the current message stays on screen. */
+	private final Cooldown messageTimer;
+
 	/**
 	 * Constructor, establishes the properties of the screen.
 	 *
@@ -43,6 +78,7 @@ public class SettingsScreen extends Screen {
 		this.returnCode = 1;
 		this.selectionCooldown = Core.getCooldown(SELECTION_TIME);
 		this.selectionCooldown.reset();
+		this.messageTimer = Core.getCooldown(MESSAGE_TIME);
 
 		this.mouseWasPressed = this.inputManager.isLeftMousePressed();
 	}
@@ -83,35 +119,164 @@ public class SettingsScreen extends Screen {
 		boolean mousePressed = this.inputManager.isLeftMousePressed();
 
 		if (this.inputDelay.checkFinished()) {
-			if (this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
-				this.draggingSlider = -1;
-				this.isRunning = false;
+			if (this.waitForRelease) {
+				if (firstKeyDown() < 0)
+					this.waitForRelease = false;
+			} else if (this.waitingFor != null) {
+				updateWaitingForKey();
+			} else if (this.controlsPage) {
+				updateControlsPage();
 			} else {
-				updateMouseVolume(mousePressed);
-
-				// Keyboard changes are paused while a slider is being dragged.
-				if (this.draggingSlider == -1
-						&& this.selectionCooldown.checkFinished()) {
-
-					if (this.inputManager.isKeyDown(KeyEvent.VK_UP)
-							|| this.inputManager.isKeyDown(KeyEvent.VK_DOWN)) {
-						this.currentMenuItem = (this.currentMenuItem + 1) % 2;
-						this.selectionCooldown.reset();
-					}
-
-					if (this.inputManager.isKeyDown(KeyEvent.VK_LEFT)) {
-						adjustSelectedVolume(-10);
-						this.selectionCooldown.reset();
-					} else if (this.inputManager.isKeyDown(KeyEvent.VK_RIGHT)) {
-						adjustSelectedVolume(10);
-						this.selectionCooldown.reset();
-					}
-				}
+				updateMainPage(mousePressed);
 			}
 		}
 
 		this.mouseWasPressed = mousePressed;
 		draw();
+	}
+
+	/**
+	 * Main page: volume sliders and the Controls row. ESC leaves Settings.
+	 *
+	 * @param mousePressed
+	 *            Whether the left mouse button is currently held down.
+	 */
+	private void updateMainPage(final boolean mousePressed) {
+		if (this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
+			this.draggingSlider = -1;
+			this.isRunning = false;
+			return;
+		}
+		updateMouseVolume(mousePressed);
+
+		// Keyboard changes are paused while a slider is being dragged.
+		if (this.draggingSlider != -1
+				|| !this.selectionCooldown.checkFinished())
+			return;
+
+		if (isUpDown()) {
+			this.currentMenuItem =
+					(this.currentMenuItem + MAIN_ROWS - 1) % MAIN_ROWS;
+			this.selectionCooldown.reset();
+		} else if (isDownDown()) {
+			this.currentMenuItem = (this.currentMenuItem + 1) % MAIN_ROWS;
+			this.selectionCooldown.reset();
+		} else if (this.currentMenuItem == CONTROLS_ROW) {
+			if (isSelectDown()) {
+				this.controlsPage = true;
+				this.controlsSelection = 0;
+				this.message = "";
+				this.waitForRelease = true;
+			}
+		} else if (this.inputManager.isKeyDown(KeyEvent.VK_LEFT)) {
+			adjustSelectedVolume(-10);
+			this.selectionCooldown.reset();
+		} else if (this.inputManager.isKeyDown(KeyEvent.VK_RIGHT)) {
+			adjustSelectedVolume(10);
+			this.selectionCooldown.reset();
+		}
+	}
+
+	/**
+	 * Controls page: pick an action to rebind, or reset every key. ESC goes
+	 * back to the main page.
+	 */
+	private void updateControlsPage() {
+		if (!this.selectionCooldown.checkFinished())
+			return;
+
+		if (this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
+			this.controlsPage = false;
+			this.currentMenuItem = CONTROLS_ROW;
+			this.waitForRelease = true;
+		} else if (isUpDown()) {
+			this.controlsSelection =
+					(this.controlsSelection + RESET_ROW) % (RESET_ROW + 1);
+			this.selectionCooldown.reset();
+		} else if (isDownDown()) {
+			this.controlsSelection =
+					(this.controlsSelection + 1) % (RESET_ROW + 1);
+			this.selectionCooldown.reset();
+		} else if (isSelectDown()) {
+			if (this.controlsSelection == RESET_ROW) {
+				this.keyBindings.resetToDefaults();
+				this.keyBindings.save();
+				showMessage("Keys reset to defaults");
+			} else {
+				this.waitingFor = ACTIONS[this.controlsSelection];
+				this.message = "";
+			}
+			this.waitForRelease = true;
+		}
+	}
+
+	/**
+	 * Waits for the next key press and binds it to the chosen action. ESC
+	 * cancels; a key another action uses is rejected (SCRUM-19).
+	 */
+	private void updateWaitingForKey() {
+		int key = firstKeyDown();
+		if (key < 0)
+			return;
+
+		KeyBindings.Action action = this.waitingFor;
+		this.waitingFor = null;
+		this.waitForRelease = true;
+
+		if (key == KeyEvent.VK_ESCAPE) {
+			showMessage("Cancelled");
+		} else if (!KeyBindings.isAllowedFor(action, key)) {
+			showMessage(KeyBindings.nameOf(key) + " can't be used for "
+					+ action.getLabel());
+		} else {
+			KeyBindings.Action owner = this.keyBindings.bind(action, key);
+			if (owner != null)
+				showMessage("Already used by " + owner.getLabel());
+			else
+				showMessage(action.getLabel() + " set to "
+						+ KeyBindings.nameOf(key));
+		}
+	}
+
+	/**
+	 * Shows a short message under the Controls page rows.
+	 *
+	 * @param text
+	 *            Message to show.
+	 */
+	private void showMessage(final String text) {
+		this.message = text;
+		this.messageTimer.reset();
+	}
+
+	/**
+	 * Returns the first key currently held down.
+	 *
+	 * @return Key code, or -1 if no key is down.
+	 */
+	private int firstKeyDown() {
+		for (int key = 1; key <= MAX_KEY_CODE; key++)
+			if (this.inputManager.isKeyDown(key))
+				return key;
+		return -1;
+	}
+
+	/** @return Whether up (W or the up arrow) is held. */
+	private boolean isUpDown() {
+		return this.inputManager.isKeyDown(KeyEvent.VK_UP)
+				|| this.inputManager.isKeyDown(KeyEvent.VK_W);
+	}
+
+	/** @return Whether down (S or the down arrow) is held. */
+	private boolean isDownDown() {
+		return this.inputManager.isKeyDown(KeyEvent.VK_DOWN)
+				|| this.inputManager.isKeyDown(KeyEvent.VK_S);
+	}
+
+	/** @return Whether a select key (Space or Enter) is held. */
+	private boolean isSelectDown() {
+		return this.inputManager.isKeyDown(KeyEvent.VK_SPACE)
+				|| this.inputManager.isKeyDown(KeyEvent.VK_ENTER);
 	}
 
 	/**
@@ -202,14 +367,23 @@ public class SettingsScreen extends Screen {
 	}
 
 	/**
-	 * Returns the baseline of a key-binding row below the sliders.
+	 * Returns the baseline of the Controls row below the sliders.
 	 *
-	 * @param row
-	 *            Key-binding row index, starting from zero.
 	 * @return Vertical position of the text baseline.
 	 */
-	private int bindingY(final int row) {
-		return sliderY(1) + 60 + SPACING * row;
+	private int controlsRowY() {
+		return sliderY(1) + 2 * SPACING;
+	}
+
+	/**
+	 * Returns the baseline of a row on the Controls page.
+	 *
+	 * @param row
+	 *            Row index: an action, or RESET_ROW.
+	 * @return Vertical position of the text baseline.
+	 */
+	private int controlRowY(final int row) {
+		return this.getHeight() / 4 + CONTROL_ROW_SPACING * row;
 	}
 
 	/**
@@ -254,36 +428,61 @@ public class SettingsScreen extends Screen {
 	}
 
 	/**
-	 * Draws the volume sliders, key bindings and footer.
+	 * Draws the current page and its footer.
 	 */
 	private void draw() {
 		this.drawManager.initDrawing(this);
+		if (this.controlsPage)
+			drawControlsPage();
+		else
+			drawMainPage();
+		this.drawManager.completeDrawing(this);
+	}
+
+	/**
+	 * Draws the volume sliders and the Controls row.
+	 */
+	private void drawMainPage() {
 		this.drawManager.drawScreenTitle(
 				this, MenuItem.SETTINGS.getTitle());
 
 		drawVolumeSlider(0, "BGM", Sound.Category.BGM);
 		drawVolumeSlider(1, "SFX", Sound.Category.SFX);
 
-		this.drawManager.drawMenuRow(
-				this, "Key Bindings", bindingY(0), false);
+		this.drawManager.drawMenuRow(this, "Controls", controlsRowY(),
+				this.currentMenuItem == CONTROLS_ROW);
 
-		this.drawManager.drawMenuRow(
-				this, "- Move Left: A / Left Arrow -",
-				bindingY(1), false);
+		this.drawManager.drawKeyHints(this, this.currentMenuItem == CONTROLS_ROW
+				? "space to open, esc back"
+				: "drag volume, arrows adjust, esc back");
+	}
 
-		this.drawManager.drawMenuRow(
-				this, "- Move Right: D / Right Arrow -",
-				bindingY(2), false);
+	/**
+	 * Draws every action with its key, the reset row and the last message.
+	 */
+	private void drawControlsPage() {
+		this.drawManager.drawScreenTitle(this, "Controls");
 
-		this.drawManager.drawMenuRow(
-				this, "- Shoot: Space -", bindingY(3), false);
+		for (int row = 0; row < ACTIONS.length; row++) {
+			KeyBindings.Action action = ACTIONS[row];
+			String key = this.waitingFor == action
+					? "?"
+					: this.keyBindings.keyName(action);
+			this.drawManager.drawMenuRow(this,
+					action.getLabel() + ": " + key, controlRowY(row),
+					this.controlsSelection == row);
+		}
+		this.drawManager.drawMenuRow(this, "Reset to defaults",
+				controlRowY(RESET_ROW),
+				this.controlsSelection == RESET_ROW);
 
-		this.drawManager.drawMenuRow(
-				this, "- Back: ESC -", bindingY(4), false);
+		if (!this.message.isEmpty() && !this.messageTimer.checkFinished())
+			this.drawManager.drawMenuRow(this, this.message,
+					controlRowY(RESET_ROW) + CONTROL_ROW_SPACING * 3 / 2,
+					false);
 
-		this.drawManager.drawKeyHints(
-				this, "drag volume, arrows adjust, esc back");
-
-		this.drawManager.completeDrawing(this);
+		this.drawManager.drawKeyHints(this, this.waitingFor != null
+				? "press the new key, esc to cancel"
+				: "w+s / arrows to move, space to change, esc back");
 	}
 }
