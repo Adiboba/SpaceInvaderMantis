@@ -28,6 +28,8 @@ import entity.Ship;
 import item.ItemAPI;
 import item.ItemSystem;
 
+import static java.awt.SystemColor.text;
+
 /**
  * Manages screen drawing.
  *
@@ -54,7 +56,7 @@ public final class DrawManager {
 	private static final int ITEM_PANEL_TOP = 43;
 	private static final int ITEM_SLOT_HEIGHT = 16;
 	/** Item panel font size: small and fixed so the panel fits one line. */
-	private static final float ITEM_FONT_SIZE = 9f;
+	private static final float ITEM_FONT_SIZE = 8f;
 	/** Item notice baseline, measured up from the bottom of the screen. */
 	private static final int ITEM_NOTICE_BOTTOM_OFFSET = 60;
 	/** The shield bubble blinks during this many last milliseconds. */
@@ -64,10 +66,17 @@ public final class DrawManager {
 	/** Current world offset Y (screen shake). */
 	private static int worldOffsetY;
 	/** Normal sized font. */
+    private static final float REGULAR_FONT_SIZE= 16;
 	private static Font fontRegular;
 	/** Normal sized font properties. */
 	private static FontMetrics fontRegularMetrics;
+    /**Medium sized font.(Bigger than small, smaller than regular) */
+    private static final float MEDIUM_FONT_SIZE = 12f;
+    private static Font fontMedium;
+    /** Big sized font properties. */
+    private FontMetrics fontMediumMetrics;
 	/** Big sized font. */
+    private static final float BIG_FONT_SIZE = 24f;
 	private static Font fontBig;
 	/** Big sized font properties. */
 	private static FontMetrics fontBigMetrics;
@@ -164,7 +173,11 @@ public final class DrawManager {
 		MidBoss1,
 		MidBoss2,
 		FinalBoss1,
-		FinalBoss2
+		FinalBoss2,
+
+        /*Title screen sprites. */
+        Title,
+        TAlien
 	};
 
 	/**
@@ -231,28 +244,35 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.ShipSkinD2, new boolean[13][8]);
 			spriteMap.put(SpriteType.ShipSkinD3, new boolean[13][8]);
 
+            //Title Screen
+            spriteMap.put(SpriteType.Title, new boolean[96][40]);
+            spriteMap.put(SpriteType.TAlien, new boolean[96][40]);
+
 			fileManager.loadSprite(spriteMap);
 			logger.info("Finished loading the sprites.");
 
 			// Font loading.
-			fontRegular = fileManager.loadFont(14f);
-			fontBig = fileManager.loadFont(24f);
+			fontRegular = fileManager.loadFont(REGULAR_FONT_SIZE);
+			fontBig = fileManager.loadFont(BIG_FONT_SIZE);
+            fontMedium = fileManager.loadFont(MEDIUM_FONT_SIZE);
 			logger.info("Finished loading the fonts.");
 
 		} catch (IOException e) {
 			logger.warning("Loading failed: " + e.getMessage());
-			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, 14);
-			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, 24);
+			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(REGULAR_FONT_SIZE));
+			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(BIG_FONT_SIZE));
+            fontMedium = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(MEDIUM_FONT_SIZE));
 		} catch (FontFormatException e) {
 			logger.warning("Font formating failed.");
-			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, 14);
-			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, 24);
+			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(REGULAR_FONT_SIZE));
+			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(BIG_FONT_SIZE));
+            fontMedium= new Font(Font.MONOSPACED, Font.PLAIN, Math.round(MEDIUM_FONT_SIZE));
 		}
 
 		// Derived outside the try so it is set on the fallback path too.
 		// While it was inside, a missing font file left it null and the game
 		// died on the first frame.
-		fontSelected = fontRegular.deriveFont(17f);
+		fontSelected = fontRegular.deriveFont(BIG_FONT_SIZE);
 	}
 
 	/**
@@ -286,11 +306,14 @@ public final class DrawManager {
 	public void initDrawing(final Screen screen) {
 
 		if (fontRegular == null) {
-			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, 14);
+			fontRegular = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(REGULAR_FONT_SIZE));
 		}
 		if (fontBig == null) {
-			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, 24);
+			fontBig = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(BIG_FONT_SIZE));
 		}
+        if (fontMedium == null) {
+            fontMedium = new Font(Font.MONOSPACED, Font.PLAIN, Math.round(MEDIUM_FONT_SIZE));
+        }
 		if (fontSelected == null) {
 			fontSelected = fontRegular;
 		}
@@ -308,6 +331,7 @@ public final class DrawManager {
 
 		fontRegularMetrics = backBufferGraphics.getFontMetrics(fontRegular);
 		fontBigMetrics = backBufferGraphics.getFontMetrics(fontBig);
+        fontMediumMetrics = backBufferGraphics.getFontMetrics(fontMedium);
 		fontSelectedMetrics = backBufferGraphics.getFontMetrics(fontSelected);
 
 		// drawBorders(screen);
@@ -602,15 +626,15 @@ public final class DrawManager {
 	public void drawItemHint(final Screen screen, final ItemSystem items) {
 		int slots = items.api().getView().slots.size();
 		backBufferGraphics.setColor(Color.GRAY);
-		drawCenteredRegularString(screen, "Catch item drops with your ship",
+		drawCenteredMediumString(screen, "Catch item drops with your ship",
 				screen.getHeight() * 2 / 3);
-		drawCenteredRegularString(screen, "Keys " + itemKeyNames(slots)
+		drawCenteredMediumString(screen, "Keys " + itemKeyNames(slots)
 				+ " use stored items", screen.getHeight() * 2 / 3
-				+ fontRegularMetrics.getHeight());
+				+ fontMediumMetrics.getHeight());
 		ItemAPI.ItemInfo equipped = items.equippedThisRun();
 		if (equipped != null)
-			drawCenteredRegularString(screen, "Equipped: " + equipped.displayName,
-					screen.getHeight() * 2 / 3 + fontRegularMetrics.getHeight() * 2);
+			drawCenteredMediumString(screen, "Equipped: " + equipped.displayName,
+					screen.getHeight() * 2 / 3 + fontMediumMetrics.getHeight() * 2);
 	}
 
 	/**
@@ -746,30 +770,30 @@ public final class DrawManager {
 	private static final int BOSS_BAR_HEIGHT = 8;
 	/** Gap between the "BOSS" label baseline and the top of the bar. */
 	private static final int BOSS_BAR_GAP = 4;
-	
+
 	/** Draws the current boss's remaining health as a labelled bar below the item HUD, so the player can track a Stage 5 (MidBoss) or Stage 10 (FinalBoss) encounter at a glance (Requirement 8 - Gameplay HUD). Boss may be null when the stage has no boss or it has already been defeated. */
 	public void drawBossHealthBar(final Screen screen, final Boss boss, final int positionY) {
 		if (boss == null || boss.isDestroyed())
 			return;
-		
+
 		int maxHp = Math.max(1, boss.getMaxHp());
 		int hp = Math.max(0, Math.min(boss.getHp(), maxHp));
-		
+
 		int barWidth = (int) (screen.getWidth() * BOSS_BAR_WIDTH_RATIO);
 		int barX = (screen.getWidth() - barWidth) / 2;
 		int barY = positionY + BOSS_BAR_GAP;
 		int filledWidth = barWidth * hp / maxHp;
-		
+
 		backBufferGraphics.setFont(fontRegular);
 		backBufferGraphics.setColor(Color.WHITE);
 		drawCenteredRegularString(screen, "BOSS", positionY);
-		
+
 		backBufferGraphics.setColor(Color.RED);
 		backBufferGraphics.drawRect(barX, barY, barWidth, BOSS_BAR_HEIGHT);
 		if (filledWidth > 0)
 			backBufferGraphics.fillRect(barX, barY, filledWidth, BOSS_BAR_HEIGHT);
 	}
-	
+
 	/**
 	 * Draws a sparkle, see-through according to its age.
 	 * AUTHORED BY: VFX TEAM (Effection)
@@ -860,12 +884,12 @@ public final class DrawManager {
 	public void drawScore(final Screen screen, final int score) {
 		int textY = 25;
 
-		backBufferGraphics.setFont(fontRegular);
+		backBufferGraphics.setFont(fontMedium);
 		String label = "SCORE";
 		String scoreString = Integer.toString(score);
 
-		int scoreWidth = fontRegularMetrics.stringWidth(scoreString);
-		int labelWidth = fontRegularMetrics.stringWidth(label);
+		int scoreWidth = fontMediumMetrics.stringWidth(scoreString);
+		int labelWidth = fontMediumMetrics.stringWidth(label);
 		int scoreX = screen.getWidth() - SCORE_ZONE_MARGIN - scoreWidth;
 		int labelX = scoreX - SCORE_LABEL_GAP - labelWidth;
 
@@ -885,12 +909,12 @@ public final class DrawManager {
 	 *            Current lives.
 	 */
 	/** Horizontal space reserved for the "LIVES" label. */
-	private static final int LIVES_LABEL_WIDTH = 46;
+	private static final int LIVES_LABEL_WIDTH = 80;
 	/** Horizontal space reserved per life icon. */
 	private static final int LIVES_ICON_SPACING = 35;
 
 	public void drawLives(final Screen screen, final int lives) {
-		backBufferGraphics.setFont(fontRegular);
+		backBufferGraphics.setFont(fontMedium);
 		backBufferGraphics.setColor(Color.WHITE);
 		backBufferGraphics.drawString("LIVES", 20, 25);
 
@@ -922,9 +946,9 @@ public final class DrawManager {
 		String label = "LEVEL";
 		String valueString = Integer.toString(level);
 
-		backBufferGraphics.setFont(fontRegular);
-		int labelWidth = fontRegularMetrics.stringWidth(label);
-		int valueWidth = fontRegularMetrics.stringWidth(valueString);
+		backBufferGraphics.setFont(fontMedium);
+		int labelWidth = fontMediumMetrics.stringWidth(label);
+		int valueWidth = fontMediumMetrics.stringWidth(valueString);
 		int gap = 6;
 		int totalWidth = labelWidth + gap + valueWidth;
 		int labelX = (screen.getWidth() - totalWidth) / 2;
@@ -967,7 +991,7 @@ public final class DrawManager {
 
 		backBufferGraphics.setColor(Color.CYAN);
 		backBufferGraphics.fillPolygon(xPoints, yPoints, 4);
-		backBufferGraphics.setFont(fontRegular);
+		backBufferGraphics.setFont(fontMedium);
 		backBufferGraphics.setColor(Color.WHITE);
 		backBufferGraphics.drawString(valueString, startX + DIAMOND_ICON_SIZE
 				+ DIAMOND_ICON_GAP, textY);
@@ -1079,10 +1103,12 @@ public final class DrawManager {
 	 *            Screen to draw on.
 	 */
 	public void drawTitle(final Screen screen) {
-		String titleString = "Invaders";
-
-		backBufferGraphics.setColor(Color.GREEN);
-		drawCenteredBigString(screen, titleString, screen.getHeight() / 3);
+        int[] size = getSpriteSize(SpriteType.Title);
+        int scale = 4;
+        int left = (screen.getWidth() - size[0] * scale) / 2;
+        int top = screen.getHeight() / 3 - size[1] * scale;
+        drawSpriteScaled(SpriteType.Title, left, top, scale, Color.GREEN);
+        drawSpriteScaled(SpriteType.TAlien, left, top, scale, Color.WHITE);
 	}
 
 	/**
@@ -1182,8 +1208,11 @@ public final class DrawManager {
 	 * @return Spacing, in pixels.
 	 */
 	private int menuItemSpacing() {
-		return fontRegularMetrics.getHeight() * 5 / 4;
+		return fontRegularMetrics.getHeight() * 9 / 5;
 	}
+
+    /** Distance from the bottom edge to the last line of hint text. */
+    private static final int HINT_BOTTOM_MARGIN = 36;
 
 	/**
 	 * Draws the keys available on the current screen, one line along the
@@ -1195,21 +1224,27 @@ public final class DrawManager {
 	 *            Keys to show, already worded for the current state.
 	 */
 	public void drawKeyHints(final Screen screen, final String hints) {
-		Font hintFont = fontRegular;
-		FontMetrics metrics = fontRegularMetrics;
-		int maxWidth = screen.getWidth() - 20;
-		int textWidth = metrics.stringWidth(hints);
-		if (textWidth > maxWidth) {
-			hintFont = fontRegular.deriveFont(
-					fontRegular.getSize2D() * maxWidth / textWidth);
-			metrics = backBufferGraphics.getFontMetrics(hintFont);
-		}
-		backBufferGraphics.setFont(hintFont);
-		backBufferGraphics.setColor(Color.GRAY);
-		backBufferGraphics.drawString(hints,
-				(screen.getWidth() - metrics.stringWidth(hints)) / 2,
-				screen.getHeight() - fontRegularMetrics.getHeight() * 2);
-	}
+        String[] lines = hints.split("\n");
+        int maxWidth = screen.getWidth() - 20;
+        int lineHeight = fontMediumMetrics.getHeight();
+        int y = screen.getHeight() - HINT_BOTTOM_MARGIN - lineHeight * (lines.length - 1);
+
+        backBufferGraphics.setColor(Color.GRAY);
+        for (String line : lines) {
+            Font hintFont = fontMedium;
+            FontMetrics metrics = fontMediumMetrics;
+            int textWidth = metrics.stringWidth(line);
+            if (textWidth > maxWidth) {   // too wide: shrink to fit
+                hintFont = fontMedium.deriveFont(
+                        fontMedium.getSize2D() * maxWidth / textWidth);
+                metrics = backBufferGraphics.getFontMetrics(hintFont);
+            }
+            backBufferGraphics.setFont(hintFont);
+            backBufferGraphics.drawString(line,
+                    (screen.getWidth() - metrics.stringWidth(line)) / 2, y);
+            y += lineHeight;
+        }
+    }
 
 	/**
 	 * Draws the exit confirmation over the menu. Filled first so the menu
@@ -1451,6 +1486,7 @@ public final class DrawManager {
 	 * Draws the scrolling stars behind the main menu. Call it right after
 	 * initDrawing so everything else is drawn on top.
 	 *
+     *
 	 * @param screen
 	 *            Screen to draw on.
 	 * @param starfield
@@ -1505,7 +1541,7 @@ public final class DrawManager {
 		String accuracyString = String
 				.format("accuracy %.2f%%", accuracy * 100);
 
-		int height = isNewRecord ? 4 : 2;
+		int height = isNewRecord ? 3 : 2;
 
 		backBufferGraphics.setColor(Color.WHITE);
 		drawCenteredRegularString(screen, scoreString, screen.getHeight()
@@ -1537,10 +1573,10 @@ public final class DrawManager {
 
 		backBufferGraphics.setColor(Color.GREEN);
 		drawCenteredRegularString(screen, newRecordString, screen.getHeight()
-				/ 4 + fontRegularMetrics.getHeight() * 10);
+				/ 3 + fontRegularMetrics.getHeight() * 9);
 		backBufferGraphics.setColor(Color.WHITE);
 		drawCenteredRegularString(screen, introduceNameString,
-				screen.getHeight() / 4 + fontRegularMetrics.getHeight() * 12);
+				screen.getHeight() / 3 + fontRegularMetrics.getHeight() * 11);
 
 		// 3 letters name.
 		int positionX = screen.getWidth()
@@ -1564,8 +1600,8 @@ public final class DrawManager {
 
 			backBufferGraphics.drawString(Character.toString(name[i]),
 					positionX,
-					screen.getHeight() / 4 + fontRegularMetrics.getHeight()
-							* 14);
+					screen.getHeight() / 3 + fontRegularMetrics.getHeight()
+							* 13);
 		}
 	}
 
@@ -1585,7 +1621,7 @@ public final class DrawManager {
 		String continueOrExitString =
 				"Press Space to play again, Escape to exit";
 
-		int height = isNewRecord ? 4 : 2;
+		int height = isNewRecord ? 3 : 2;
 
 		backBufferGraphics.setColor(Color.GREEN);
 		drawCenteredBigString(screen, gameOverString, screen.getHeight()
@@ -1594,9 +1630,9 @@ public final class DrawManager {
 		if (acceptsInput)
 			backBufferGraphics.setColor(Color.GREEN);
 		else
-			backBufferGraphics.setColor(Color.GRAY);
-		drawCenteredRegularString(screen, continueOrExitString,
-				screen.getHeight() / 2 + fontRegularMetrics.getHeight() * 10);
+			backBufferGraphics.setColor(acceptsInput ? Color.GREEN : Color.GRAY);
+		drawCenteredMediumString(screen, continueOrExitString,
+				screen.getHeight()-HINT_BOTTOM_MARGIN);
 	}
 
 	/**
@@ -1639,6 +1675,14 @@ public final class DrawManager {
 			i++;
 		}
 	}
+    /** Draws small text centred horizontally. */
+    public void drawCenteredSmallString(final Screen screen, final String string,
+                                        final int height, final Color color) {
+        backBufferGraphics.setFont(smallFont());
+        backBufferGraphics.setColor(color);
+        int width = backBufferGraphics.getFontMetrics(smallFont()).stringWidth(string);
+        backBufferGraphics.drawString(string, (screen.getWidth() - width) / 2, height);
+    }
 
 	/**
 	 * Draws a centered string on regular font.
@@ -1656,6 +1700,22 @@ public final class DrawManager {
 		backBufferGraphics.drawString(string, screen.getWidth() / 2
 				- fontRegularMetrics.stringWidth(string) / 2, height);
 	}
+    /**
+     * Draws a centered string on big font.
+     *
+     * @param screen
+     *            Screen to draw on.
+     * @param string
+     *            String to draw.
+     * @param height
+     *            Height of the drawing.
+     */
+    public void drawCenteredMediumString(final Screen screen, final String string,
+                                         final int height) {
+        backBufferGraphics.setFont(fontMedium);
+        backBufferGraphics.drawString(string, screen.getWidth() /2
+                        - fontMediumMetrics.stringWidth(string) / 2, height);
+    }
 
 	/**
 	 * Draws a centered string on big font.
@@ -2022,6 +2082,18 @@ public final class DrawManager {
 		return backBufferGraphics.getFontMetrics(smallFont()).getHeight()
 				+ 2;
 	}
+    public void drawMediumString(final String string, final int positionX,
+                                 final int positionY, final Color color) {
+        backBufferGraphics.setFont(fontMedium);
+        backBufferGraphics.setColor(color);
+        backBufferGraphics.drawString(string, positionX, positionY);
+    }
+
+    public int getMediumStringWidth(final String string) {
+        if (fontMediumMetrics == null)
+            return string.length() * 14;
+        return fontMediumMetrics.stringWidth(string);
+    }
 
 	/**
 	 * Draws a coin or diamond icon in the same colours as the balance HUD.
