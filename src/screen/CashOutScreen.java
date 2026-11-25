@@ -125,19 +125,18 @@ public class CashOutScreen extends Screen {
 
 		this.drawManager.drawDiamondBalance(this, this.pendingDiamonds,
 				this.height / 3);
-		this.drawManager.drawCenteredMediumString(this,
+		this.drawManager.drawCenteredRegularString(this,
 				"Diamonds at risk", this.height / 3 + 25);
 
 		this.drawManager.drawDiamondBalance(this, DiamondManager
 				.getInstance().getDiamonds(), this.height / 2);
-		this.drawManager.drawCenteredMediumString(this,
+		this.drawManager.drawCenteredRegularString(this,
 				"Diamonds banked", this.height / 2 + 25);
 
 		drawRiskPreview(this.height / 2 + 60);
 
-		this.drawManager.drawKeyHints(this, "esc cash out and end run");
-		this.drawManager.drawCenteredSmallString(this, "space risk it on level "
-				+ this.nextLevel, this.height - 45);
+        drawManager.drawKeyHints(this,
+                "space risk it on level " + nextLevel + "\nesc cash out and end run");
 
 		this.drawManager.completeDrawing(this);
 	}
@@ -163,14 +162,14 @@ public class CashOutScreen extends Screen {
 	 *            Y position of the first line.
 	 */
 	private void drawRiskPreview(final int positionY) {
-		this.drawManager.drawCenteredMediumString(this, "Clear level "
+		this.drawManager.drawCenteredRegularString(this, "Clear level "
 				+ this.nextLevel + " for +" + this.nextLevel + " diamonds",
 				positionY);
 		String outcome = this.nextLevel >= Core.getNumLevels()
 				? "Final level: " + diamondsIfNextLevelCleared()
 						+ " banked automatically"
 				: "Then " + diamondsIfNextLevelCleared() + " at risk";
-		this.drawManager.drawCenteredMediumString(this, outcome,
+		this.drawManager.drawCenteredRegularString(this, outcome,
 				positionY + 20);
 	}
 }

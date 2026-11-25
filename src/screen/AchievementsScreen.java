@@ -40,15 +40,15 @@ public class AchievementsScreen extends Screen {
 	/**
 	 * Vertical position of the page label.
 	 */
-	private static final int PAGE_LABEL_Y = 115;
+	private static final int PAGE_LABEL_Y = 125;
 	/**
 	 * Vertical position of the first row.
 	 */
-	private static final int FIRST_ROW_Y = 130;
+	private static final int FIRST_ROW_Y = 150;
 	/**
 	 * Vertical distance between rows.
 	 */
-	private static final int ROW_SPACING = 52;
+	private static final int ROW_SPACING = 60;
 	/**
 	 * Horizontal position of the trophy icon.
 	 */
@@ -214,7 +214,7 @@ public class AchievementsScreen extends Screen {
 
 		List<Achievement> page = this.pages.get(this.currentPage);
 		if (page.isEmpty()) {
-			this.drawManager.drawMediumString("No achievements yet.",
+			this.drawManager.drawRegularString("No achievements yet.",
 					TEXT_X, FIRST_ROW_Y + 24, MUTED);
 		} else {
 			for (int i = 0; i < getRowCount(); i++) {
@@ -229,10 +229,10 @@ public class AchievementsScreen extends Screen {
 		}
 		if (this.scrollOffset + getRowCount()
 				< this.pages.get(this.currentPage).size()) {
-			this.drawManager.drawMediumString(
-					" ------  MORE ACHIEVEMENT BELOW  ------",
-					TEXT_X,
-					430,
+            String more = "---- MORE ACHIEVEMENT BELOW ----";
+			this.drawManager.drawRegularString(more,
+                    (getWidth()-this.drawManager.getRegularStringWidth(more))/2,
+					getHeight()- 120,
 					MUTED);
 		}
 
@@ -281,13 +281,15 @@ public class AchievementsScreen extends Screen {
                 achievement.getName(),
                 TEXT_X, positionY + 8, nameColor);
 
-        this.drawManager.drawMediumString(
-                manager.getRequirementText(achievement),
-                TEXT_X, positionY + 24, MUTED);
+		this.drawManager.drawSmallString(
+				manager.getRequirementText(achievement),
+				TEXT_X, positionY + 30, MUTED);
 
+        String status = manager.getProgressText(achievement);
         this.drawManager.drawMediumString(
-                manager.getProgressText(achievement),
-                STATUS_X, positionY + 8,
+                status,
+                getWidth() - 20 - this.drawManager.getMediumStringWidth(status),
+                positionY + 8,
                 achievement.isUnlocked() ? SELECTED : MUTED);
 	}
 }
