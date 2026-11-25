@@ -212,6 +212,11 @@ public class Ship extends Entity {
 		return false;
 	}
 
+	/** Keeps the shooting cooldown from advancing during a pause. */
+	public final void resumeAfterPause(final long pausedMilliseconds) {
+		this.shootingCooldown.delayBy(pausedMilliseconds);
+	}
+
 	/**
 	 * Sets the bonuses items add on top of the base fire rate and bullet
 	 * speed (Team CS - Item System). The base values stay unchanged; with
@@ -248,7 +253,7 @@ public class Ship extends Entity {
 		if (bonus != this.itemFireRateBonus) {
 			this.itemFireRateBonus = bonus;
 			// (base shots per second) + (item bonus) -> new interval.
-			this.shootingCooldown = Core.getCooldown((int) Math.round(
+			this.shootingCooldown.setDuration((int) Math.round(
 					1000.0 / (1000.0 / this.type.shootingInterval + bonus)));
 		}
 	}

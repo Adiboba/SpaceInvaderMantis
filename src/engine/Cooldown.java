@@ -69,6 +69,12 @@ public class Cooldown {
 							* (this.milliseconds + this.variance));
 	}
 
+	/** Changes a fixed cooldown's duration without restarting it. */
+	public final void setDuration(final int milliseconds) {
+		this.milliseconds = milliseconds;
+		this.duration = milliseconds;
+	}
+
 	/** Keeps a running cooldown from advancing while gameplay is paused. */
 	public final void delayBy(final long pausedMilliseconds) {
 		if (this.time != 0 && pausedMilliseconds > 0)
