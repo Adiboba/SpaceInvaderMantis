@@ -97,7 +97,8 @@ public final class SoundManager {
 			return;
 		if (sound.getCategory() != Sound.Category.SFX)
 			return;
-		backend.playSfx(sound, sfxVolume);
+		float volume = sound == Sound.VICTORY ? bgmVolume : sfxVolume;
+		backend.playSfx(sound, volume);
 	}
 
 	/**

@@ -7,6 +7,7 @@ import java.awt.event.KeyEvent;
 import java.awt.Color;
 import engine.soundEngine.Sound;
 import engine.soundEngine.SoundManager;
+import engine.soundEngine.MenuSounds;
 
 /**
  * Implements the settings screen.
@@ -94,9 +95,12 @@ public class SettingsScreen extends Screen {
 				? Sound.Category.BGM
 				: Sound.Category.SFX;
 
+		int currentPercent = getVolumePercent(category);
 		int percent = Math.max(0,
-				Math.min(100, getVolumePercent(category) + delta));
+				Math.min(100, currentPercent + delta));
 
+		if (percent != currentPercent)
+			MenuSounds.playMove();
 		this.soundManager.setVolume(category, percent / 100f);
 	}
 	/**
@@ -299,6 +303,8 @@ public class SettingsScreen extends Screen {
 								&& Math.abs(mouseY - sliderY(index)) <= 14;
 
 				if (onTrack) {
+					if (this.currentMenuItem != index)
+						MenuSounds.playMove();
 					this.draggingSlider = index;
 					this.currentMenuItem = index;
 					break;
@@ -317,6 +323,8 @@ public class SettingsScreen extends Screen {
 					? Sound.Category.BGM
 					: Sound.Category.SFX;
 
+			if (percent != getVolumePercent(category))
+				MenuSounds.playMove();
 			this.soundManager.setVolume(category, percent / 100f);
 
 			if (!mousePressed)
@@ -330,7 +338,10 @@ public class SettingsScreen extends Screen {
 								&& mouseY <= sliderY(index) + 14;
 
 				if (insideControl) {
-					this.currentMenuItem = index;
+					if (this.currentMenuItem != index) {
+						this.currentMenuItem = index;
+						MenuSounds.playMove();
+					}
 					break;
 				}
 			}
