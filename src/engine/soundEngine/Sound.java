@@ -27,10 +27,18 @@ public enum Sound {
     PLAYER_DAMAGE("sounds/player_damage.wav", Category.SFX),
     /** Player ship destroyed (game over). */
 	PLAYER_EXPLOSION("sounds/player_death.wav", Category.SFX),
-    /** Player ship damaged. */
-	COIN_PICKUP("sounds/coin_pickup.wav", Category.SFX),
+	/** Coin collected. */
+	COIN_PICKUP("sounds/coin2.wav", Category.SFX),
 	/** Diamond picked up. */
 	DIAMOND_PICKUP("sounds/diamond_pickup.wav", Category.SFX),
+	/** Stage 5 boss hit. */
+	BOSS_HIT("sounds/boss_hit_sound1.wav", Category.SFX),
+	/** Stage 5 boss defeated. */
+	BOSS_DEATH("sounds/boss_death1.wav", Category.SFX),
+	/** Stage 10 boss hit. */
+	FINAL_BOSS_HIT("sounds/boss_hit_sound4.wav", Category.SFX),
+	/** Stage 10 boss defeated. */
+	FINAL_BOSS_DEATH("sounds/boss_death3.wav", Category.SFX),
 	/** Special item: shield collected or activated. */
 	ITEM_SHIELD("sounds/item_shield.wav", Category.SFX),
 	/** Special item: freeze collected or activated. */
@@ -46,7 +54,7 @@ public enum Sound {
 	/** Special item: bullet speed collected. */
 	ITEM_BULLET_SPEED("sounds/item_bullet_speed.wav", Category.SFX),
 	/** Item bought in the shop. */
-	PURCHASE("sounds/purchase.wav", Category.SFX),
+	PURCHASE("sounds/shop_buy.wav", Category.SFX),
 	/** Cursor moved to another menu entry. */
 	MENU_MOVE("sounds/menu_move.wav", Category.SFX),
 	/** Menu entry confirmed. */

@@ -1216,6 +1216,20 @@ public class GameScreen extends Screen {
 							&& !this.midBoss.isDestroyed()
 							&& checkCollision(bullet, (Entity) this.midBoss)) {
 						addScore(this.midBoss.manageCollisionsBoss(bullet));
+						if (this.level == 5) {
+							SoundManager.getInstance().playSfx(Sound.BOSS_HIT);
+							if (this.midBoss.isDestroyed())
+								SoundManager.getInstance().playSfx(
+										Sound.BOSS_DEATH);
+						} else if (this.level == 10) {
+							if (this.midBoss.isDestroyed()) {
+								SoundManager.getInstance().playSfx(
+										Sound.FINAL_BOSS_DEATH);
+							} else {
+								SoundManager.getInstance().playSfx(
+										Sound.FINAL_BOSS_HIT);
+							}
+						}
 						if (this.midBoss.isDestroyed()) {
 							this.shipsDestroyed++;
 							this.screenShake.trigger();
@@ -1342,6 +1356,7 @@ public class GameScreen extends Screen {
 			if (this.lives > 0 && !this.ship.isDestroyed()
 					&& checkCollision(coin, this.ship)) {
 				CurrencyManager.getInstance().addCoins(coin.getValue());
+				SoundManager.getInstance().playSfx(Sound.COIN_PICKUP);
 				this.coinsCollectedThisLevel += coin.getValue();
 				this.coinsCollected += coin.getValue();
 				recyclable.add(coin);
