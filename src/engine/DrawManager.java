@@ -59,6 +59,12 @@ public final class DrawManager {
 	private static final float ITEM_FONT_SIZE = 8f;
 	/** Item notice baseline, measured up from the bottom of the screen. */
 	private static final int ITEM_NOTICE_BOTTOM_OFFSET = 60;
+	/** Item icons are square sprites of this many pixels. */
+	private static final int ITEM_ICON_SIZE = 12;
+	/** Space between an effect's icon and its "x2" / "8s" text. */
+	private static final int ITEM_ICON_GAP = 2;
+	/** Smallest space between a falling item's icon and the edge of its box. */
+	private static final int ITEM_DROP_PADDING = 4;
 	/** The shield bubble blinks during this many last milliseconds. */
 	private static final long SHIELD_BLINK_MILLIS = 2000;
 	/** Current world offset X (screen shake). */
@@ -169,6 +175,16 @@ public final class DrawManager {
         Looter,
         /** Item used achievement icon. */
 		ItemCol,
+
+		/** Item icons, 12x12, drawn in the item's colour. */
+		ItemLife,
+		ItemShield,
+		ItemRapidFire,
+		ItemBulletSpeed,
+		ItemFreeze,
+		ItemBoost,
+		ItemScoreBoost,
+
 		/** Bouncing boss animation frames. */
 		MidBoss1,
 		MidBoss2,
@@ -225,6 +241,14 @@ public final class DrawManager {
 			spriteMap.put(SpriteType.Accuracytarget, new boolean[11][11]);
             spriteMap.put(SpriteType.Looter, new boolean[11][11]);
 			spriteMap.put(SpriteType.ItemCol, new boolean[12][12]);
+			// Item icons: same order as in res/graphics.
+			spriteMap.put(SpriteType.ItemLife, new boolean[12][12]);
+			spriteMap.put(SpriteType.ItemShield, new boolean[12][12]);
+			spriteMap.put(SpriteType.ItemRapidFire, new boolean[12][12]);
+			spriteMap.put(SpriteType.ItemBulletSpeed, new boolean[12][12]);
+			spriteMap.put(SpriteType.ItemFreeze, new boolean[12][12]);
+			spriteMap.put(SpriteType.ItemBoost, new boolean[12][12]);
+			spriteMap.put(SpriteType.ItemScoreBoost, new boolean[12][12]);
 			spriteMap.put(SpriteType.MidBoss1, new boolean[16][10]);
 			spriteMap.put(SpriteType.MidBoss2, new boolean[16][10]);
 			spriteMap.put(SpriteType.FinalBoss1, new boolean[24][16]);
@@ -512,7 +536,59 @@ public final class DrawManager {
 	 */
 	public void drawItemDrops(final ItemSystem items) {
 		backBufferGraphics.setFont(fontRegular);
-		items.drawDrops(backBufferGraphics);
+		for (ItemAPI.DropView drop : items.api().getView().drops) {
+			int x = (int) drop.bounds.x, y = (int) drop.bounds.y;
+			int w = (int) drop.bounds.width, h = (int) drop.bounds.height;
+			SpriteType sprite = itemSprite(drop.item.effectKind);
+			// The box is exactly the pickup area, in the item's colour.
+			backBufferGraphics.setColor(ItemSystem
+					.colorOf(drop.item.effectKind));
+			backBufferGraphics.fillRect(x, y, w, h);
+			backBufferGraphics.setColor(Color.BLACK);
+			if (sprite == null) {
+				// No icon for this item yet: keep the first letter.
+				backBufferGraphics.drawString(
+						drop.item.displayName.substring(0, 1), x + w / 4,
+						y + h - 3);
+				continue;
+			}
+			// Whole-number pixel size keeps the icon sharp: a 24x24 box
+			// gives 1, a 36x36 box (drop.width in item-balance) gives 2.
+			int pixel = Math.max(1, (Math.min(w, h) - 2 * ITEM_DROP_PADDING)
+					/ ITEM_ICON_SIZE);
+			int size = pixel * ITEM_ICON_SIZE;
+			drawSpriteScaled(sprite, x + (w - size) / 2, y + (h - size) / 2,
+					pixel, Color.BLACK);
+		}
+	}
+
+	/**
+	 * Picks the icon sprite of an item kind.
+	 *
+	 * @param kind
+	 *            Item effect kind.
+	 * @return Its 12x12 icon, or null when it has none (the caller then
+	 *         falls back to the letters).
+	 */
+	private static SpriteType itemSprite(final ItemAPI.EffectKind kind) {
+		switch (kind) {
+			case LIFE:
+				return SpriteType.ItemLife;
+			case SHIELD:
+				return SpriteType.ItemShield;
+			case RAPID_FIRE:
+				return SpriteType.ItemRapidFire;
+			case BULLET_SPEED:
+				return SpriteType.ItemBulletSpeed;
+			case FREEZE:
+				return SpriteType.ItemFreeze;
+			case BOOST:
+				return SpriteType.ItemBoost;
+			case SCORE_BOOST:
+				return SpriteType.ItemScoreBoost;
+			default:
+				return null;
+		}
 	}
 
 	/**
@@ -580,9 +656,17 @@ public final class DrawManager {
 			backBufferGraphics.drawRect(x, ITEM_PANEL_TOP, boxWidth,
 					ITEM_SLOT_HEIGHT);
 			if (item != null) {
-				String label = shortItemName(item.effectKind);
-				backBufferGraphics.drawString(label, x + (boxWidth
-						- metrics.stringWidth(label)) / 2, baseline);
+				SpriteType sprite = itemSprite(item.effectKind);
+				if (sprite != null) {
+					// 12x12 icon centred in the box, one pixel per pixel.
+					drawSpriteScaled(sprite, x + (boxWidth - ITEM_ICON_SIZE) / 2,
+							ITEM_PANEL_TOP + (ITEM_SLOT_HEIGHT - ITEM_ICON_SIZE) / 2,
+							1, ItemSystem.colorOf(item.effectKind));
+				} else {
+					String label = shortItemName(item.effectKind);
+					backBufferGraphics.drawString(label, x + (boxWidth
+							- metrics.stringWidth(label)) / 2, baseline);
+				}
 			}
 			x += boxWidth + 6;
 		}
@@ -594,15 +678,23 @@ public final class DrawManager {
 			ItemAPI.EffectView effect = view.effects.get(i);
 			if (effect.item.activationMode == ItemAPI.ActivationMode.EQUIPPED)
 				continue;
-			String label = shortItemName(effect.item.effectKind);
+			SpriteType sprite = itemSprite(effect.item.effectKind);
+			// With an icon the label is only the "x2" / "8s" part.
+			String label = sprite == null
+					? shortItemName(effect.item.effectKind) : "";
 			if (effect.stacks != null)
 				label += "x" + effect.stacks;
 			else if (effect.remainingMillis != null)
 				label += (effect.remainingMillis + 999) / 1000 + "s";
-			right -= metrics.stringWidth(label);
-			backBufferGraphics.setColor(ItemSystem
-					.colorOf(effect.item.effectKind));
-			backBufferGraphics.drawString(label, right, baseline);
+			Color color = ItemSystem.colorOf(effect.item.effectKind);
+			int iconSpace = sprite == null ? 0
+					: ITEM_ICON_SIZE + ITEM_ICON_GAP;
+			right -= metrics.stringWidth(label) + iconSpace;
+			if (sprite != null)
+				drawSpriteScaled(sprite, right, ITEM_PANEL_TOP
+						+ (ITEM_SLOT_HEIGHT - ITEM_ICON_SIZE) / 2, 1, color);
+			backBufferGraphics.setColor(color);
+			backBufferGraphics.drawString(label, right + iconSpace, baseline);
 			right -= 8;
 		}
 
