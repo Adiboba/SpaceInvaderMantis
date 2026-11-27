@@ -2237,6 +2237,36 @@ public final class DrawManager {
 	}
 
 	/**
+	 * Draws text in the game font at a custom size, without changing the
+	 * shared small/regular fonts used by other screens.
+	 *
+	 * @param string    Text to draw.
+	 * @param positionX Left edge.
+	 * @param positionY Baseline.
+	 * @param color     Text colour.
+	 * @param size      Font size in points.
+	 */
+	public void drawSizedString(final String string, final int positionX,
+								final int positionY, final Color color,
+								final float size) {
+		backBufferGraphics.setFont(fontRegular.deriveFont(size));
+		backBufferGraphics.setColor(color);
+		backBufferGraphics.drawString(string, positionX, positionY);
+	}
+
+	/**
+	 * @param string Text to measure.
+	 * @param size   Font size in points.
+	 * @return Width in pixels of the text at that size.
+	 */
+	public int getSizedStringWidth(final String string, final float size) {
+		if (backBufferGraphics == null)
+			return (int) (string.length() * size);
+		return backBufferGraphics.getFontMetrics(fontRegular.deriveFont(size))
+				.stringWidth(string);
+	}
+
+	/**
 	 * @return Distance between two lines of small text, in pixels.
 	 */
 	public int getSmallLineHeight() {

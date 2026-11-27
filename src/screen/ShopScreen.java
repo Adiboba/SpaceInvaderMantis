@@ -113,6 +113,10 @@ public class ShopScreen extends Screen {
 	private static final Color BORDER = new Color(70, 70, 70);
 	/** Colour of the LIMITED tag. */
 	private static final Color LIMITED = new Color(255, 120, 200);
+	/** Deep-space panel fill; translucent so the stars show through faintly. */
+	private static final Color PANEL_FILL = new Color(8, 12, 28, 170);
+	/** Tab label size; smaller than the shared small font so NIGHT MKT fits. */
+	private static final float TAB_FONT_SIZE = 8f;
 
 	/** Keys watched for presses (not holds). */
 	private static final int[] KEYS = { KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT,
@@ -137,6 +141,8 @@ public class ShopScreen extends Screen {
 	private boolean[] keysWereDown;
 	/** Mouse state last frame, so a held button clicks once. */
 	private boolean mouseWasDown;
+	/** Stars behind the shop, same as the main menu. */
+	private final Starfield starfield;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -151,6 +157,7 @@ public class ShopScreen extends Screen {
 	public ShopScreen(final int width, final int height, final int fps) {
 		super(width, height, fps);
 		this.returnCode = 1;
+		this.starfield = new Starfield(width, height);
 		showTab(Tab.SHIPS);
 	}
 
@@ -182,6 +189,7 @@ public class ShopScreen extends Screen {
 			handleKeys();
 			handleMouse();
 		}
+		this.starfield.update();
 		draw();
 	}
 
@@ -519,6 +527,7 @@ public class ShopScreen extends Screen {
 	 */
 	private void draw() {
 		this.drawManager.initDrawing(this);
+		this.drawManager.drawStarfield(this, this.starfield);
 		this.drawManager.drawScreenTitle(this, MenuItem.SHOP.getTitle());
 		drawBalances();
 		drawTabs();
@@ -526,7 +535,7 @@ public class ShopScreen extends Screen {
 		drawDetail();
 		drawMessage();
 		this.drawManager.drawKeyHints(this,
-				"arrows/click select | C coins | V diamonds | esc back");
+				"arrows select | C coins | V diamonds | esc back");
 		this.drawManager.completeDrawing(this);
 	}
 
@@ -558,9 +567,12 @@ public class ShopScreen extends Screen {
 			this.drawManager.drawBox(area.x, area.y, area.width - 1,
 					area.height - 1, active ? each.color : BORDER);
 			String title = each.title.toUpperCase();
-			this.drawManager.drawSmallString(title, area.x + (area.width
-							- this.drawManager.getSmallStringWidth(title)) / 2,
-					area.y + 19, active ? each.color : Color.GRAY);
+			int titleWidth = this.drawManager.getSizedStringWidth(title,
+					TAB_FONT_SIZE);
+			this.drawManager.drawSizedString(title,
+					area.x + (area.width - titleWidth) / 2,
+					area.y + area.height / 2 + 4,
+					active ? each.color : Color.GRAY, TAB_FONT_SIZE);
 		}
 	}
 
@@ -584,11 +596,15 @@ public class ShopScreen extends Screen {
 			boolean isSelected = index == this.selected;
 			boolean soldOut = purchases.isMaxed(entry.item);
 
+			this.drawManager.fillBox(area.x, area.y, area.width,
+					area.height, PANEL_FILL);
 			if (isSelected)
 				this.drawManager.fillBox(area.x, area.y, area.width,
 						area.height, tint(this.tab.color));
 			this.drawManager.drawBox(area.x, area.y, area.width - 1,
 					area.height - 1, isSelected ? this.tab.color : BORDER);
+			if (isSelected)
+				drawHudCorners(area, Color.WHITE);
 
 			Color nameColor = isSelected ? this.tab.color
 					: soldOut ? Color.GRAY : Color.WHITE;
@@ -671,8 +687,11 @@ public class ShopScreen extends Screen {
 	/** Large showcase: preview, description, price and BUY controls. */
 	private void drawDetail() {
 		Rectangle area = detailArea();
+		this.drawManager.fillBox(area.x, area.y, area.width, area.height,
+				PANEL_FILL);
 		this.drawManager.drawBox(area.x, area.y, area.width, area.height,
 				BORDER);
+		drawHudCorners(area, this.tab.color);
 		if (this.entries.isEmpty()) {
 			if (this.tab == Tab.EFFECTS)
 				drawEffectsPlaceholderDetail(area);
@@ -687,9 +706,9 @@ public class ShopScreen extends Screen {
 		int infoCenter = infoLeft + (area.width - (infoLeft - area.x)) / 2;
 
 		// A dedicated preview stage gives the item artwork visual weight.
-		this.drawManager.fillBox(area.x + 14, area.y + 48, 156, 190,
+		this.drawManager.fillBox(area.x + 14, area.y + 48, 156, 170,
 				tint(this.tab.color));
-		this.drawManager.drawBox(area.x + 14, area.y + 48, 156, 190,
+		this.drawManager.drawBox(area.x + 14, area.y + 48, 156, 170,
 				this.tab.color);
 		this.drawManager.fillBox(area.x + 178, area.y + 20, 1,
 				area.height - 76, BORDER);
@@ -700,6 +719,8 @@ public class ShopScreen extends Screen {
 		this.drawManager.drawRegularString(name, infoCenter
 				- this.drawManager.getRegularStringWidth(name) / 2,
 				area.y + 36, this.tab.color);
+		if (item.getCategory() != ShopCategory.EFFECT)
+			drawOrbitRing(previewCenter, area.y + 150);
 		drawPreview(item, previewCenter, area.y + 92);
 
 		int lineHeight = this.drawManager.getSmallLineHeight();
@@ -1183,6 +1204,62 @@ public class ShopScreen extends Screen {
 		if (line.length() > 0)
 			lines.add(line.toString());
 		return lines;
+	}
+
+	/**
+	 * Draws a dotted orbit ring under the preview, with a small moon
+	 * travelling around it.
+	 *
+	 * @param centerX
+	 *            Centre of the ring.
+	 * @param centerY
+	 *            Vertical centre of the ring.
+	 */
+	private void drawOrbitRing(final int centerX, final int centerY) {
+		int rx = 60;
+		int ry = 12;
+		int dots = 40;
+		Color ring = new Color(this.tab.color.getRed(),
+				this.tab.color.getGreen(), this.tab.color.getBlue(), 110);
+		for (int i = 0; i < dots; i++) {
+			double a = 2 * Math.PI * i / dots;
+			int x = centerX + (int) Math.round(Math.cos(a) * rx);
+			int y = centerY + (int) Math.round(Math.sin(a) * ry);
+			this.drawManager.fillBox(x - 1, y - 1, 2, 2, ring);
+		}
+		// The moon finishes one lap every 3 seconds.
+		double moon = (System.currentTimeMillis() % 3000) / 3000.0
+				* 2 * Math.PI;
+		int mx = centerX + (int) Math.round(Math.cos(moon) * rx);
+		int my = centerY + (int) Math.round(Math.sin(moon) * ry);
+		this.drawManager.fillBox(mx - 2, my - 2, 4, 4, Color.WHITE);
+	}
+
+	/**
+	 * Draws sci-fi HUD brackets on the four corners of a panel.
+	 *
+	 * @param r
+	 *            Panel bounds.
+	 * @param color
+	 *            Bracket colour.
+	 */
+	private void drawHudCorners(final Rectangle r, final Color color) {
+		int len = 10;
+		int t = 2;
+		int right = r.x + r.width - t;
+		int bottom = r.y + r.height - t;
+		// Top-left
+		this.drawManager.fillBox(r.x, r.y, len, t, color);
+		this.drawManager.fillBox(r.x, r.y, t, len, color);
+		// Top-right
+		this.drawManager.fillBox(r.x + r.width - len, r.y, len, t, color);
+		this.drawManager.fillBox(right, r.y, t, len, color);
+		// Bottom-left
+		this.drawManager.fillBox(r.x, bottom, len, t, color);
+		this.drawManager.fillBox(r.x, r.y + r.height - len, t, len, color);
+		// Bottom-right
+		this.drawManager.fillBox(r.x + r.width - len, bottom, len, t, color);
+		this.drawManager.fillBox(right, r.y + r.height - len, t, len, color);
 	}
 
 	/**
