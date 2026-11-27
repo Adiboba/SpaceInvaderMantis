@@ -81,6 +81,8 @@ public class AchievementManager {
 		addInfinityVoidAchievement();
 		addFirstBossKill();
 		addFleetMasterAchievement();
+		addLastLifeChallengeAchievement();
+		addNoItemChallengeAchievement();
 
 		// Page 2: tier achievements. The tier team adds theirs below,
 		// using addTierAchievement(...).
@@ -201,6 +203,26 @@ public class AchievementManager {
 				SpriteType.Trophy,
 				this.playerProfile.isAchievementUnlocked("gold_survivor"),
 				Requirement.FLAWLESS_LEVELS, new Color(255, 215, 0)));
+	}
+
+	/** Adds the challenge for clearing a level 6+ with one life remaining. */
+	private void addLastLifeChallengeAchievement() {
+		addNormalAchievement(new Achievement("last_life_clear",
+				"Last Stand",
+				"Clear a level 6+ with exactly 1 life remaining.", 0,
+				SpriteType.Trophy,
+				this.playerProfile.isAchievementUnlocked("last_life_clear"),
+				Requirement.LEVEL_CHALLENGE, new Color(255, 90, 90)));
+	}
+
+	/** Adds the challenge for clearing a level 6+ without using an item. */
+	private void addNoItemChallengeAchievement() {
+		addNormalAchievement(new Achievement("no_item_clear",
+				"Pure Skill",
+				"Clear a level 6+ without using any items.", 0,
+				SpriteType.ItemCol,
+				this.playerProfile.isAchievementUnlocked("no_item_clear"),
+				Requirement.LEVEL_CHALLENGE, new Color(100, 220, 255)));
 	}
 
 	/** Adds the 60%, 90%, and 100% accuracy achievements. */
@@ -503,12 +525,18 @@ public class AchievementManager {
 
 
 
+	/** @return Total successfully used items saved in the player profile. */
+	public final int getTotalItemsUsed() {
+		return this.playerProfile.getTotalItemsUsed();
+	}
+
 	/** @return Requirement text suitable for the achievement screen. */
 	public final String getRequirementText(final Achievement achievement) {
 		if (achievement.getId().startsWith("item_use_"))
 			return achievement.getDescription();
-		if (achievement.getRequirement() == Requirement.ACCURACY)
-			return achievement.getDescription();
+        if (achievement.getRequirement() == Requirement.ACCURACY
+                || achievement.getRequirement() == Requirement.LEVEL_CHALLENGE)
+            return achievement.getDescription();
 		if (achievement.getRequirement() == Requirement.LEVEL10_ALL_SHIPS
 				|| achievement.getRequirement() == Requirement.FLAWLESS_LEVELS
                 || achievement.getRequirement() == Requirement.RUNCOINS
@@ -531,6 +559,8 @@ public class AchievementManager {
 		if (achievement.getRequirement() == Requirement.FLAWLESS_LEVELS)
 			return this.playerProfile.getFlawlessLevelsCleared() + "/"
 					+ achievement.getRequiredEnemyKills();
+        if (achievement.getRequirement() == Requirement.LEVEL_CHALLENGE)
+            return "LEVEL 6+";
 		if (achievement.getRequirement() == Requirement.ACCURACY)
 			return achievement.getRequiredEnemyKills() + "%";
 		if (achievement.getRequiredEnemyKills() <= 0 || achievement.getRequirement() == Requirement.RUNCOINS)
@@ -539,6 +569,34 @@ public class AchievementManager {
 			return this.playerProfile.getTotalItemsUsed() + "/"
 					+ achievement.getRequiredEnemyKills();
 		return getTotalEnemiesKilled() + "/" + achievement.getRequiredEnemyKills();
+	}
+
+	/**
+	 * Checks the two special level challenges after a level is cleared.
+	 * Both challenges are available only from level 6 onward.
+	 *
+	 * @param level Level just cleared.
+	 * @param livesRemaining Lives remaining when the level was cleared.
+	 * @param usedNoItems True when no item was used during this level attempt.
+	 * @return Newly unlocked challenge achievements.
+	 */
+	public final List<Achievement> recordLevelChallengeAchievements(
+			final int level, final int livesRemaining,
+			final boolean usedNoItems) {
+		List<Achievement> unlocked = new ArrayList<Achievement>();
+		if (level < 6)
+			return unlocked;
+		if (livesRemaining == 1) {
+			Achievement achievement = unlockById("last_life_clear");
+			if (achievement != null)
+				unlocked.add(achievement);
+		}
+		if (usedNoItems) {
+			Achievement achievement = unlockById("no_item_clear");
+			if (achievement != null)
+				unlocked.add(achievement);
+		}
+		return unlocked;
 	}
 
 	/**

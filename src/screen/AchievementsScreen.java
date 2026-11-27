@@ -16,7 +16,7 @@ import engine.DrawManager;
  */
 public class AchievementsScreen extends Screen {
     /** Size of the text in the achievements list. */
-    private static final float ACHIEVEMENT_FONT_SIZE = 10f;
+    private static final float ACHIEVEMENT_FONT_SIZE = 12f;
     /**
 	 * Colour of the row the player has selected.
 	 */
@@ -40,27 +40,27 @@ public class AchievementsScreen extends Screen {
 	/**
 	 * Vertical position of the page label.
 	 */
-	private static final int PAGE_LABEL_Y = 125;
+	private static final int PAGE_LABEL_Y = 150;
 	/**
 	 * Vertical position of the first row.
 	 */
-	private static final int FIRST_ROW_Y = 150;
+	private static final int FIRST_ROW_Y = 190;
 	/**
 	 * Vertical distance between rows.
 	 */
-	private static final int ROW_SPACING = 60;
+	private static final int ROW_SPACING = 82;
 	/**
 	 * Horizontal position of the trophy icon.
 	 */
-	private static final int TROPHY_X = 30;
+	private static final int TROPHY_X = 38;
 	/**
 	 * Horizontal position of the name and description.
 	 */
-	private static final int TEXT_X = 70;
+	private static final int TEXT_X = 92;
 	/**
 	 * Horizontal position of the status area.
 	 */
-	private static final int STATUS_X = 320;
+	private static final int STATUS_X = 390;
 	/**
 	 * Time between selection moves, in milliseconds.
 	 */
@@ -94,6 +94,7 @@ public class AchievementsScreen extends Screen {
 	 * Stops the selection moving on every frame.
 	 */
 	private Cooldown selectionCooldown;
+	private boolean mouseWasDown;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -172,7 +173,7 @@ public class AchievementsScreen extends Screen {
 					this.selectionCooldown.reset();
 				}
 			}
-			int visibleRows = AchievementManager.ACHIEVEMENTS_PER_PAGE;
+			int visibleRows = getVisibleRows();
 
 			if (this.selected < this.scrollOffset) {
 				this.scrollOffset = this.selected;
@@ -180,6 +181,22 @@ public class AchievementsScreen extends Screen {
 				this.scrollOffset = this.selected - visibleRows + 1;
 			}
 		}
+		boolean mouseDown = this.inputManager.isMousePressed();
+		if (mouseDown) {
+			int mouseX = this.inputManager.getMouseX();
+			int mouseY = this.inputManager.getMouseY();
+			java.awt.Rectangle track = scrollbarArea();
+			if (track.contains(mouseX, mouseY)) {
+				int maxScroll = Math.max(0,
+						this.pages.get(this.currentPage).size() - getVisibleRows());
+				float ratio = (float) (mouseY - track.y) / Math.max(1, track.height);
+				this.scrollOffset = Math.max(0, Math.min(maxScroll,
+						Math.round(ratio * maxScroll)));
+				this.selected = Math.min(this.pages.get(this.currentPage).size() - 1,
+						this.scrollOffset);
+			}
+		}
+		this.mouseWasDown = mouseDown;
 		if (this.inputManager.isKeyDown(KeyEvent.VK_ESCAPE)
 				&& this.inputDelay.checkFinished()) {
 			this.isRunning = false;
@@ -190,13 +207,37 @@ public class AchievementsScreen extends Screen {
 	 * @return Number of rows shown on the current page, at most
 	 * {@link AchievementManager#ACHIEVEMENTS_PER_PAGE}.
 	 */
-	private int getRowCount() {
-		int remaining = this.pages.get(this.currentPage).size()
-				- this.scrollOffset;
+	private int getVisibleRows() {
+		int available = getHeight() - FIRST_ROW_Y - 105;
+		// Keep four rows visible so both Normal and Tier pages have room
+		// to scroll, including the current five-item Normal page.
+		return Math.max(1, Math.min(4, available / ROW_SPACING + 1));
+	}
 
-		return Math.min(
-				remaining,
-				AchievementManager.ACHIEVEMENTS_PER_PAGE);
+	private int getRowCount() {
+		int remaining = this.pages.get(this.currentPage).size() - this.scrollOffset;
+		return Math.min(remaining, getVisibleRows());
+	}
+
+	/** Track for the achievement-list scrollbar. */
+	private java.awt.Rectangle scrollbarArea() {
+		return new java.awt.Rectangle(getWidth() - 16, FIRST_ROW_Y,
+				7, getHeight() - FIRST_ROW_Y - 112);
+	}
+
+	/** Draws a proportional scrollbar thumb when the page overflows. */
+	private void drawScrollbar() {
+		int total = this.pages.get(this.currentPage).size();
+		int visible = getVisibleRows();
+		if (total <= visible) return;
+		java.awt.Rectangle track = scrollbarArea();
+		this.drawManager.fillBox(track.x, track.y, track.width, track.height,
+				new Color(35, 35, 35));
+		int thumbHeight = Math.max(24, track.height * visible / total);
+		int maxScroll = total - visible;
+		int thumbY = track.y + (track.height - thumbHeight) * this.scrollOffset
+				/ Math.max(1, maxScroll);
+		this.drawManager.fillBox(track.x, thumbY, track.width, thumbHeight, SELECTED);
 	}
 
 	/**
@@ -227,15 +268,7 @@ public class AchievementsScreen extends Screen {
 			}
 
 		}
-		if (this.scrollOffset + getRowCount()
-				< this.pages.get(this.currentPage).size()) {
-            String more = "---- MORE ACHIEVEMENT BELOW ----";
-			this.drawManager.drawRegularString(more,
-                    (getWidth()-this.drawManager.getRegularStringWidth(more))/2,
-					getHeight()- 120,
-					MUTED);
-		}
-
+		drawScrollbar();
 
 		this.drawManager.drawKeyHints(this,
 				"left right page, up down move, esc back");
@@ -279,16 +312,16 @@ public class AchievementsScreen extends Screen {
 
         this.drawManager.drawMediumString(
                 achievement.getName(),
-                TEXT_X, positionY + 8, nameColor);
+                TEXT_X, positionY + 12, nameColor);
 
 		this.drawManager.drawSmallString(
 				manager.getRequirementText(achievement),
-				TEXT_X, positionY + 30, MUTED);
+				TEXT_X, positionY + 42, MUTED);
 
         String status = manager.getProgressText(achievement);
         this.drawManager.drawMediumString(
                 status,
-                getWidth() - 20 - this.drawManager.getMediumStringWidth(status),
+                getWidth() - 30 - this.drawManager.getMediumStringWidth(status),
                 positionY + 8,
                 achievement.isUnlocked() ? SELECTED : MUTED);
 	}

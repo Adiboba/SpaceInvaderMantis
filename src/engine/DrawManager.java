@@ -54,7 +54,10 @@ public final class DrawManager {
 	private static BufferedImage backBuffer;
 	/** Top of the item panel, right below the HUD line (Team CS). */
 	private static final int ITEM_PANEL_TOP = 43;
-	private static final int ITEM_SLOT_HEIGHT = 16;
+	private static final int ITEM_SLOT_HEIGHT = 32;
+	/** Item slot icons are rendered at 2x so they fill the larger slots. */
+	private static final int ITEM_SLOT_ICON_SIZE = 24;
+	private static final int ITEM_SLOT_ICON_SCALE = 2;
 	/** Item panel font size: small and fixed so the panel fits one line. */
 	private static final float ITEM_FONT_SIZE = 8f;
 	/** Item notice baseline, measured up from the bottom of the screen. */
@@ -72,7 +75,7 @@ public final class DrawManager {
 	/** Current world offset Y (screen shake). */
 	private static int worldOffsetY;
 	/** Normal sized font. */
-    private static final float REGULAR_FONT_SIZE= 16;
+    private static final float REGULAR_FONT_SIZE= 14;
 	private static Font fontRegular;
 	/** Normal sized font properties. */
 	private static FontMetrics fontRegularMetrics;
@@ -82,7 +85,7 @@ public final class DrawManager {
     /** Big sized font properties. */
     private FontMetrics fontMediumMetrics;
 	/** Big sized font. */
-    private static final float BIG_FONT_SIZE = 24f;
+    private static final float BIG_FONT_SIZE = 18f;
 	private static Font fontBig;
 	/** Big sized font properties. */
 	private static FontMetrics fontBigMetrics;
@@ -641,8 +644,9 @@ public final class DrawManager {
 		Font font = fontRegular.deriveFont(ITEM_FONT_SIZE);
 		FontMetrics metrics = backBufferGraphics.getFontMetrics(font);
 		backBufferGraphics.setFont(font);
-		int baseline = ITEM_PANEL_TOP + ITEM_SLOT_HEIGHT - 4;
-		int boxWidth = metrics.stringWidth("WW") + 8;
+		int baseline = ITEM_PANEL_TOP + ITEM_SLOT_HEIGHT - 7;
+		// Double the slot width as well as its height for the larger HUD.
+		int boxWidth = (metrics.stringWidth("WW") + 8) * 2;
 
 		// Slots: "1 [SH]" ... an empty slot is a dark box.
 		int x = 6;
@@ -658,10 +662,13 @@ public final class DrawManager {
 			if (item != null) {
 				SpriteType sprite = itemSprite(item.effectKind);
 				if (sprite != null) {
-					// 12x12 icon centred in the box, one pixel per pixel.
-					drawSpriteScaled(sprite, x + (boxWidth - ITEM_ICON_SIZE) / 2,
-							ITEM_PANEL_TOP + (ITEM_SLOT_HEIGHT - ITEM_ICON_SIZE) / 2,
-							1, ItemSystem.colorOf(item.effectKind));
+					// 12x12 source icon, rendered at 2x in the enlarged slot.
+					drawSpriteScaled(sprite,
+							x + (boxWidth - ITEM_SLOT_ICON_SIZE) / 2,
+							ITEM_PANEL_TOP
+								+ (ITEM_SLOT_HEIGHT - ITEM_SLOT_ICON_SIZE) / 2,
+							ITEM_SLOT_ICON_SCALE,
+							ItemSystem.colorOf(item.effectKind));
 				} else {
 					String label = shortItemName(item.effectKind);
 					backBufferGraphics.drawString(label, x + (boxWidth
@@ -674,6 +681,8 @@ public final class DrawManager {
 		// Effects, right-aligned and compact: "RFx2 SH8s". The equipped item is
 		// not listed here; the countdown hint names it.
 		int right = screen.getWidth() - 6;
+		Font effectFont = fontRegular.deriveFont(9f);
+		FontMetrics effectMetrics = backBufferGraphics.getFontMetrics(effectFont);
 		for (int i = view.effects.size() - 1; i >= 0; i--) {
 			ItemAPI.EffectView effect = view.effects.get(i);
 			if (effect.item.activationMode == ItemAPI.ActivationMode.EQUIPPED)
@@ -689,12 +698,14 @@ public final class DrawManager {
 			Color color = ItemSystem.colorOf(effect.item.effectKind);
 			int iconSpace = sprite == null ? 0
 					: ITEM_ICON_SIZE + ITEM_ICON_GAP;
-			right -= metrics.stringWidth(label) + iconSpace;
+			right -= effectMetrics.stringWidth(label) + iconSpace;
 			if (sprite != null)
 				drawSpriteScaled(sprite, right, ITEM_PANEL_TOP
 						+ (ITEM_SLOT_HEIGHT - ITEM_ICON_SIZE) / 2, 1, color);
+			backBufferGraphics.setFont(effectFont);
 			backBufferGraphics.setColor(color);
-			backBufferGraphics.drawString(label, right + iconSpace, baseline);
+			backBufferGraphics.drawString(label, right + iconSpace,
+					ITEM_PANEL_TOP + ITEM_SLOT_HEIGHT - 7);
 			right -= 8;
 		}
 
@@ -1051,32 +1062,51 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GREEN);
 		backBufferGraphics.drawString(valueString, valueX, LEVEL_INDICATOR_Y);
 	}
-	/** Y offset of the diamond counter below the score line. */
-	private static final int DIAMONDS_Y_OFFSET = 11;
 	/** Size, in pixels, of the diamond icon drawn next to the count. */
 	private static final int DIAMOND_ICON_SIZE = 10;
 	/** Gap between the diamond icon and its number. */
 	private static final int DIAMOND_ICON_GAP = 4;
+	/** Gap between the diamond balance and the SCORE label. */
+	private static final int DIAMONDS_SCORE_GAP = 14;
 
 	/**
-	 * Draws the player's current diamond balance, left-aligned under the
-	 * score (same start X), as a small diamond icon followed by the amount
-	 * - pure display, no game logic (the Currency team's DiamondManager /
-	 * CashOutScreen own the actual Cash Out / Continue choice and the
-	 * persisted balance).
+	 * Draws the diamond balance on the score row. This overload is retained
+	 * for callers that do not have the score value available.
 	 *
-	 * @param screen
-	 *            Screen to draw on.
-	 * @param diamonds
-	 *            Current diamond balance to display.
+	 * @param screen Screen to draw on.
+	 * @param diamonds Current diamond balance.
 	 */
 	public void drawDiamonds(final Screen screen, final int diamonds) {
+		drawDiamonds(screen, diamonds, 0);
+	}
+
+	/**
+	 * Draws the diamond balance immediately to the left of the score group.
+	 * Its X position is based on the actual score width so both counters
+	 * remain separate as the score gains digits.
+	 *
+	 * @param screen Screen to draw on.
+	 * @param diamonds Current diamond balance.
+	 * @param score Current score, used to calculate the available space.
+	 */
+	public void drawDiamonds(final Screen screen, final int diamonds,
+			final int score) {
 		String valueString = Integer.toString(diamonds);
-		int textY = 25 + DIAMONDS_Y_OFFSET;
-		int startX = screen.getWidth() - 60;
+		String scoreString = Integer.toString(score);
+		int scoreWidth = fontMediumMetrics.stringWidth(scoreString);
+		int scoreLabelWidth = fontMediumMetrics.stringWidth("SCORE");
+		int scoreX = screen.getWidth() - SCORE_ZONE_MARGIN - scoreWidth;
+		int scoreLabelX = scoreX - SCORE_LABEL_GAP - scoreLabelWidth;
+
+		int diamondsWidth = DIAMOND_ICON_SIZE + DIAMOND_ICON_GAP
+				+ fontMediumMetrics.stringWidth(valueString);
+		int startX = Math.max(4,
+				scoreLabelX - DIAMONDS_SCORE_GAP - diamondsWidth);
+		int textY = 25;
 		int iconTop = textY - DIAMOND_ICON_SIZE + 1;
 
-		int[] xPoints = { startX + DIAMOND_ICON_SIZE / 2, startX + DIAMOND_ICON_SIZE,
+		int[] xPoints = { startX + DIAMOND_ICON_SIZE / 2,
+				startX + DIAMOND_ICON_SIZE,
 				startX + DIAMOND_ICON_SIZE / 2, startX };
 		int[] yPoints = { iconTop, iconTop + DIAMOND_ICON_SIZE / 2,
 				iconTop + DIAMOND_ICON_SIZE, iconTop + DIAMOND_ICON_SIZE / 2 };
@@ -1085,8 +1115,8 @@ public final class DrawManager {
 		backBufferGraphics.fillPolygon(xPoints, yPoints, 4);
 		backBufferGraphics.setFont(fontMedium);
 		backBufferGraphics.setColor(Color.WHITE);
-		backBufferGraphics.drawString(valueString, startX + DIAMOND_ICON_SIZE
-				+ DIAMOND_ICON_GAP, textY);
+		backBufferGraphics.drawString(valueString,
+				startX + DIAMOND_ICON_SIZE + DIAMOND_ICON_GAP, textY);
 	}
 
 	/**
@@ -1159,16 +1189,32 @@ public final class DrawManager {
 		backBufferGraphics.setColor(Color.GREEN);
 		backBufferGraphics.drawRect(boxX, boxY, boxWidth, boxHeight);
 
+		Font questionFont = fontRegular.deriveFont(16f);
+		backBufferGraphics.setFont(questionFont);
 		backBufferGraphics.setColor(Color.GREEN);
-		drawCenteredBigString(screen, question, boxY + spacing * 3 / 2);
-		backBufferGraphics.setColor(Color.WHITE);
-		drawCenteredRegularString(screen, warning, boxY + spacing * 5 / 2);
+		FontMetrics questionMetrics = backBufferGraphics.getFontMetrics();
+		backBufferGraphics.drawString(question,
+				(screen.getWidth() - questionMetrics.stringWidth(question)) / 2,
+				boxY + spacing * 3 / 2);
 
+		// Keep the warning comfortably inside the dialog border.
+		Font warningFont = fontRegular.deriveFont(10f);
+		backBufferGraphics.setFont(warningFont);
+		backBufferGraphics.setColor(Color.WHITE);
+		FontMetrics warningMetrics = backBufferGraphics.getFontMetrics();
+		backBufferGraphics.drawString(warning,
+				(screen.getWidth() - warningMetrics.stringWidth(warning)) / 2,
+				boxY + spacing * 5 / 2);
+
+		Font optionFont = fontRegular.deriveFont(13f);
+		FontMetrics optionMetrics = backBufferGraphics.getFontMetrics(optionFont);
 		for (int i = 0; i < options.length; i++) {
 			boolean selected = i == selectedIndex;
 			String line = (selected ? "> " : " ") + options[i];
+			backBufferGraphics.setFont(optionFont);
 			backBufferGraphics.setColor(selected ? Color.GREEN : Color.WHITE);
-			drawCenteredRegularString(screen, line,
+			backBufferGraphics.drawString(line,
+					(screen.getWidth() - optionMetrics.stringWidth(line)) / 2,
 					boxY + spacing * (i + 4));
 		}
 	}
@@ -1290,7 +1336,10 @@ public final class DrawManager {
 		// The last row stays put, so an extra row (Continue, SCRUM-18)
 		// grows the menu upwards instead of into the key hints.
 		int rowsBelow = count - 1 - index;
-		return screen.getHeight() / 2
+		// Place the menu group lower to match the intended title-screen
+		// composition while keeping it clear of the bottom keyboard hint.
+		// Hit-testing shares this baseline, so the visible rows remain clickable.
+		return screen.getHeight() / 2 + 20
 				+ menuItemSpacing() * (LAST_MENU_ROW - rowsBelow);
 	}
 
@@ -1995,6 +2044,28 @@ public final class DrawManager {
 		}
 	}
 	/**
+	 * Draws a compact menu row for dense settings pages such as key bindings.
+	 * Selected rows use a slightly larger compact font rather than the full
+	 * highlighted-menu size used by the main menu.
+	 *
+	 * @param screen Screen the row belongs to.
+	 * @param string Text to draw.
+	 * @param height Baseline of the row.
+	 * @param selected Whether the row is selected.
+	 */
+	public void drawCompactMenuRow(final Screen screen, final String string,
+			final int height, final boolean selected) {
+		Font compactFont = fontRegular.deriveFont(selected ? 14f : 12f);
+		FontMetrics metrics = backBufferGraphics.getFontMetrics(compactFont);
+		String text = selected ? "> " + string + " <" : string;
+		backBufferGraphics.setFont(compactFont);
+		backBufferGraphics.setColor(selected ? Color.GREEN : Color.WHITE);
+		backBufferGraphics.drawString(text,
+				(screen.getWidth() - metrics.stringWidth(text)) / 2,
+				height);
+	}
+
+	/**
 	 * Draws the damage dim overlay when the player is hit.
 	 *AUTHORED BY: VFX TEAM (Effection)
 	 *Any further inquiries please contact us.
@@ -2096,7 +2167,7 @@ public final class DrawManager {
 	}
 
 	/** Point size of the small text used in the shop and Customize panels. */
-	private static final float SMALL_FONT_SIZE = 8f;
+	private static final float SMALL_FONT_SIZE = 10f;
 	/** Small version of the regular game font, made on first use. */
 	private static Font fontSmall;
 

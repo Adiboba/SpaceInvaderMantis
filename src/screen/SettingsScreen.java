@@ -479,16 +479,16 @@ public class SettingsScreen extends Screen {
 			String key = this.waitingFor == action
 					? "?"
 					: this.keyBindings.keyName(action);
-			this.drawManager.drawMenuRow(this,
+			this.drawManager.drawCompactMenuRow(this,
 					action.getLabel() + ": " + key, controlRowY(row),
 					this.controlsSelection == row);
 		}
-		this.drawManager.drawMenuRow(this, "Reset to defaults",
+		this.drawManager.drawCompactMenuRow(this, "Reset to defaults",
 				controlRowY(RESET_ROW),
 				this.controlsSelection == RESET_ROW);
 
 		if (!this.message.isEmpty() && !this.messageTimer.checkFinished())
-			this.drawManager.drawMenuRow(this, this.message,
+			this.drawManager.drawCompactMenuRow(this, this.message,
 					controlRowY(RESET_ROW) + CONTROL_ROW_SPACING * 3 / 2,
 					false);
 

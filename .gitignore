@@ -169,6 +169,7 @@ pip-log.txt
 log*
 *.ttf
 !res/silkscreen/*.ttf
+!res/pressstart2p/*.ttf
 .checkstyle
 
 #################

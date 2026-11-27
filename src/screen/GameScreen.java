@@ -310,6 +310,8 @@ public class GameScreen extends Screen {
 	/** Lives the level started with (bonus life included), restored by
 	 * "Restart". */
 	private final int initialLives;
+	/** Total items used when the current level attempt began. */
+	private int itemsUsedAtLevelStart;
 	/** Bullets-shot count the level started with, restored by "Restart". */
 	private final int initialBulletsShot;
 	/** Ships-destroyed count the level started with, restored by
@@ -377,10 +379,12 @@ public class GameScreen extends Screen {
 	 */
 	public final void initialize() {
 		super.initialize();
+		this.itemsUsedAtLevelStart =
+				Core.getAchievementManager().getTotalItemsUsed();
 		SoundManager.getInstance().playBgm(Sound.BGM_GAME);
 
 		// Initialize the player in both boss and normal stages.
-		this.ship = new Ship(this.width / 2, this.height - 30,
+		this.ship = new Ship(this.width / 2, this.height - 42,
 				Core.getSelectedShipType());
 
 		// Distinct mid-boss and final boss encounters.
@@ -643,6 +647,11 @@ public class GameScreen extends Screen {
 				this.pendingDiamonds += this.meteors.collectRemaining(); // VFX TEAM (Effection): collects remaining diamonds from the meteor and adds them to pending
 				showUnlockedAchievements(Core.getAchievementManager()
 						.recordFlawlessLevelCompleted(this.tookDamage));
+				showUnlockedAchievements(Core.getAchievementManager()
+						.recordLevelChallengeAchievements(
+								this.level, this.lives,
+								Core.getAchievementManager().getTotalItemsUsed()
+										== this.itemsUsedAtLevelStart));
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
                 showUnlockedAchievement(Core.getAchievementManager().recordRunCoins(this.coinsCollected));
@@ -1077,13 +1086,13 @@ public class GameScreen extends Screen {
 		// own row below clears both.
 		drawManager.drawCoinBalance(this, CurrencyManager.getInstance()
 				.getCoins(), 36);
-		drawManager.drawDiamonds(this, engine.DiamondManager.getInstance()
-				.getDiamonds());
+		drawManager.drawDiamonds(this,
+				engine.DiamondManager.getInstance().getDiamonds(), this.score);
 		drawManager.drawHorizontalLine(this, SEPARATION_LINE_HEIGHT - 1);
 		drawManager.drawItemHud(this, this.items); // Item System (Team CS)
 		// Boss health bar: fixed overlay a row below the item HUD slots
-		// (y 43-59, Team CS), so the two never collide.
-		drawManager.drawBossHealthBar(this, this.midBoss, 64);
+		// (y 43-75, Team CS), so the two never collide.
+		drawManager.drawBossHealthBar(this, this.midBoss, 82);
 		// Low-health glitch (covers game + HUD). AUTHORED BY: VFX TEAM (Effection)
 		this.glitch.setEnabled(this.lowHealthActive && !this.levelFinished);
 		drawManager.drawGlitch(this, this.glitch);

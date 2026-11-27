@@ -25,9 +25,8 @@ import shop.Skin;
 
 /**
  * The shop (GoG - Currency System). Six tabs: Ships, Skins, Looks,
- * Upgrades, Effects and Night Market. The left side lists what is for sale,
- * the right side
- * shows the selected entry with its price and BUY buttons.
+ * Upgrades, Effects and Night Market. A large showcase displays the selected
+ * entry and its preview, details, price and BUY buttons above the catalogue.
  *
  * Skins and upgrades can be paid with coins or diamonds, so they get one
  * BUY button per currency. Upgrades can be bought again to level them up.
@@ -95,17 +94,17 @@ public class ShopScreen extends Screen {
 	}
 
 	/** Space between the screen edge and the panels. */
-	private static final int MARGIN = 16;
+	private static final int MARGIN = 20;
 	/** Height of the tab bar. */
-	private static final int TAB_HEIGHT = 20;
+	private static final int TAB_HEIGHT = 28;
 	/** Height of one row in the list. */
-	private static final int ROW_HEIGHT = 30;
-	/** Width of the list on the left. */
-	private static final int LIST_WIDTH = 188;
-	/** Gap between the list and the detail panel. */
-	private static final int PANEL_GAP = 8;
+	private static final int ROW_HEIGHT = 48;
+	/** Height reserved for the large selected-item showcase. */
+	private static final int DETAIL_HEIGHT = 300;
+	/** Gap between the showcase and the catalogue list. */
+	private static final int PANEL_GAP = 12;
 	/** Width of the scroll arrows column. */
-	private static final int SCROLL_WIDTH = 12;
+	private static final int SCROLL_WIDTH = 22;
 	/** How long a purchase message stays on screen. */
 	private static final long MESSAGE_MILLIS = 3000;
 	/** Colour of prices the player cannot afford. */
@@ -253,6 +252,15 @@ public class ShopScreen extends Screen {
 		}
 		if (scrollDownArea().contains(x, y)) {
 			select(this.scroll + visibleRows());
+			return;
+		}
+		if (scrollbarTrackArea().contains(x, y)
+				&& this.entries.size() > visibleRows()) {
+			int maxScroll = this.entries.size() - visibleRows();
+			Rectangle track = scrollbarTrackArea();
+			int relativeY = Math.max(0, Math.min(track.height, y - track.y));
+			this.scroll = Math.round((float) relativeY / track.height * maxScroll);
+			this.selected = Math.min(this.entries.size() - 1, this.scroll);
 			return;
 		}
 		if (this.entries.isEmpty())
@@ -406,7 +414,7 @@ public class ShopScreen extends Screen {
 	// --- Layout. Drawing and clicking both use these, so they line up. ---
 
 	private int balanceBaseline() {
-		return this.height / 8 + 28;
+		return this.height / 8 + 36;
 	}
 
 	private int tabTop() {
@@ -414,15 +422,19 @@ public class ShopScreen extends Screen {
 	}
 
 	private int bodyTop() {
-		return tabTop() + TAB_HEIGHT + 8;
+		return tabTop() + TAB_HEIGHT + 12;
 	}
 
 	private int bodyBottom() {
-		return this.height - 70;
+		return this.height - 82;
+	}
+
+	private int listTop() {
+		return bodyTop() + DETAIL_HEIGHT + PANEL_GAP;
 	}
 
 	private int visibleRows() {
-		return Math.max(1, (bodyBottom() - bodyTop()) / ROW_HEIGHT);
+		return Math.max(1, (bodyBottom() - listTop()) / ROW_HEIGHT);
 	}
 
 	private Rectangle tabArea(final Tab each) {
@@ -433,32 +445,48 @@ public class ShopScreen extends Screen {
 	}
 
 	private Rectangle rowArea(final int row) {
-		return new Rectangle(MARGIN, bodyTop() + row * ROW_HEIGHT,
-				LIST_WIDTH - SCROLL_WIDTH - 2, ROW_HEIGHT - 3);
+		return new Rectangle(MARGIN, listTop() + row * ROW_HEIGHT,
+				this.width - MARGIN * 2 - SCROLL_WIDTH - 4, ROW_HEIGHT - 4);
 	}
 
 	private Rectangle scrollUpArea() {
-		return new Rectangle(MARGIN + LIST_WIDTH - SCROLL_WIDTH, bodyTop(),
-				SCROLL_WIDTH, ROW_HEIGHT);
+		return new Rectangle(this.width - MARGIN - SCROLL_WIDTH,
+				listTop(), SCROLL_WIDTH, ROW_HEIGHT);
 	}
 
 	private Rectangle scrollDownArea() {
-		return new Rectangle(MARGIN + LIST_WIDTH - SCROLL_WIDTH,
-				bodyTop() + (visibleRows() - 1) * ROW_HEIGHT, SCROLL_WIDTH,
-				ROW_HEIGHT);
+		return new Rectangle(this.width - MARGIN - SCROLL_WIDTH,
+				listTop() + (visibleRows() - 1) * ROW_HEIGHT,
+				SCROLL_WIDTH, ROW_HEIGHT);
+	}
+
+	private Rectangle scrollbarTrackArea() {
+		return new Rectangle(this.width - MARGIN - SCROLL_WIDTH,
+				listTop(), SCROLL_WIDTH, visibleRows() * ROW_HEIGHT - 4);
+	}
+
+	private void drawScrollbar() {
+		if (this.entries.size() <= visibleRows()) return;
+		Rectangle track = scrollbarTrackArea();
+		this.drawManager.fillBox(track.x + 7, track.y, 5, track.height,
+				new Color(35, 35, 35));
+		int thumbHeight = Math.max(18, track.height * visibleRows() / this.entries.size());
+		int maxScroll = this.entries.size() - visibleRows();
+		int thumbY = track.y + (track.height - thumbHeight) * this.scroll
+				/ Math.max(1, maxScroll);
+		this.drawManager.fillBox(track.x + 5, thumbY, 9, thumbHeight, this.tab.color);
 	}
 
 	private Rectangle detailArea() {
-		int left = MARGIN + LIST_WIDTH + PANEL_GAP;
-		return new Rectangle(left, bodyTop(), this.width - MARGIN - left,
-				visibleRows() * ROW_HEIGHT - 3);
+		return new Rectangle(MARGIN, bodyTop(), this.width - MARGIN * 2,
+				DETAIL_HEIGHT);
 	}
 
 	/** @return Area of the BUY button(s) row. */
 	private Rectangle buyRow() {
 		Rectangle detail = detailArea();
-		return new Rectangle(detail.x + 12, detail.y + detail.height - 32,
-				detail.width - 24, 22);
+		return new Rectangle(detail.x + 16, detail.y + detail.height - 42,
+			detail.width - 32, 30);
 	}
 
 	/**
@@ -532,7 +560,7 @@ public class ShopScreen extends Screen {
 			String title = each.title.toUpperCase();
 			this.drawManager.drawSmallString(title, area.x + (area.width
 							- this.drawManager.getSmallStringWidth(title)) / 2,
-					area.y + 14, active ? each.color : Color.GRAY);
+					area.y + 19, active ? each.color : Color.GRAY);
 		}
 	}
 
@@ -565,7 +593,7 @@ public class ShopScreen extends Screen {
 			Color nameColor = isSelected ? this.tab.color
 					: soldOut ? Color.GRAY : Color.WHITE;
 			this.drawManager.drawSmallString(entry.item.getName()
-					.toUpperCase(), area.x + 6, area.y + 12, nameColor);
+					.toUpperCase(), area.x + 14, area.y + 19, nameColor);
 			String tag = null;
 			Color tagColor = Color.YELLOW;
 			if (entry.discounted) {
@@ -575,11 +603,11 @@ public class ShopScreen extends Screen {
 				tagColor = LIMITED;
 			}
 			if (tag != null)
-				this.drawManager.drawSmallString(tag, area.x + area.width - 6
+				this.drawManager.drawSmallString(tag, area.x + area.width - 8
 								- this.drawManager.getSmallStringWidth(tag),
-						area.y + 12, tagColor);
+						area.y + 19, tagColor);
 
-			int baseline = area.y + 24;
+			int baseline = area.y + 38;
 			if (soldOut) {
 				this.drawManager.drawSmallString(entry.item.isRepeatable()
 								? "MAX LEVEL" : "OWNED", area.x + 6, baseline,
@@ -602,11 +630,8 @@ public class ShopScreen extends Screen {
 			}
 		}
 
-		// Scroll arrows, only when the list does not fit.
-		if (this.scroll > 0)
-			drawArrow(scrollUpArea(), "^");
-		if (this.scroll + visibleRows() < this.entries.size())
-			drawArrow(scrollDownArea(), "v");
+		// A proportional scrollbar replaces the old tiny arrow-only cue.
+		drawScrollbar();
 	}
 
 	private void drawArrow(final Rectangle area, final String arrow) {
@@ -643,7 +668,7 @@ public class ShopScreen extends Screen {
 		return left + 12 + this.drawManager.getSmallStringWidth(text) + 12;
 	}
 
-	/** Right-hand panel: preview, description, price and BUY. */
+	/** Large showcase: preview, description, price and BUY controls. */
 	private void drawDetail() {
 		Rectangle area = detailArea();
 		this.drawManager.drawBox(area.x, area.y, area.width, area.height,
@@ -657,32 +682,42 @@ public class ShopScreen extends Screen {
 		Entry entry = this.entries.get(this.selected);
 		ShopItem item = entry.item;
 		PurchaseManager purchases = PurchaseManager.getInstance();
-		int centerX = area.x + area.width / 2;
+		int previewCenter = area.x + 92;
+		int infoLeft = area.x + 190;
+		int infoCenter = infoLeft + (area.width - (infoLeft - area.x)) / 2;
+
+		// A dedicated preview stage gives the item artwork visual weight.
+		this.drawManager.fillBox(area.x + 14, area.y + 48, 156, 190,
+				tint(this.tab.color));
+		this.drawManager.drawBox(area.x + 14, area.y + 48, 156, 190,
+				this.tab.color);
+		this.drawManager.fillBox(area.x + 178, area.y + 20, 1,
+				area.height - 76, BORDER);
+		this.drawManager.drawSmallString("PREVIEW", area.x + 24,
+				area.y + 38, Color.GRAY);
 
 		String name = item.getName();
-		this.drawManager.drawRegularString(name, centerX
-						- this.drawManager.getRegularStringWidth(name) / 2,
-				area.y + 22, this.tab.color);
-
-		drawPreview(item, centerX, area.y + 36);
+		this.drawManager.drawRegularString(name, infoCenter
+				- this.drawManager.getRegularStringWidth(name) / 2,
+				area.y + 36, this.tab.color);
+		drawPreview(item, previewCenter, area.y + 92);
 
 		int lineHeight = this.drawManager.getSmallLineHeight();
-		int y = area.y + 94;
-		drawCentered(item.getCategory().getLabel().toUpperCase(), centerX, y,
-				Color.GRAY);
-		y += lineHeight + 4;
+		int y = area.y + 70;
+		drawCentered(item.getCategory().getLabel().toUpperCase(), infoCenter,
+				y, Color.GRAY);
+		y += lineHeight + 5;
 		for (String line : wrap(item.getDescription().toUpperCase(),
-				area.width - 20)) {
-			drawCentered(line, centerX, y, Color.WHITE);
+				area.width - 205)) {
+			drawCentered(line, infoCenter, y, Color.WHITE);
 			y += lineHeight;
 		}
-		y += 4;
+		y += 5;
 		for (String line : extraLines(item)) {
-			drawCentered(line, centerX, y, new Color(170, 170, 170));
+			drawCentered(line, infoCenter, y, new Color(170, 170, 170));
 			y += lineHeight;
 		}
 
-		// Price label above the buttons.
 		int priceBaseline = buyRow().y - 10;
 		boolean maxed = purchases.isMaxed(item);
 		boolean ended = !maxed
@@ -690,7 +725,7 @@ public class ShopScreen extends Screen {
 		String priceLabel = item.isRepeatable() && !maxed
 				? "PRICE OF LEVEL " + (purchases.getQuantity(item) + 1)
 				: "PRICE";
-		this.drawManager.drawSmallString(priceLabel, area.x + 12,
+		this.drawManager.drawSmallString(priceLabel, area.x + 14,
 				priceBaseline, Color.GRAY);
 		if (entry.discounted && !maxed) {
 			StringBuilder was = new StringBuilder("WAS");
@@ -699,19 +734,19 @@ public class ShopScreen extends Screen {
 					was.append(was.length() > 3 ? " / " : " ").append(item
 							.getPrice(currency, purchases.getQuantity(item)));
 			String text = was.toString();
-			this.drawManager.drawSmallString(text, area.x + area.width - 12
-							- this.drawManager.getSmallStringWidth(text),
+			this.drawManager.drawSmallString(text, area.x + area.width - 14
+						- this.drawManager.getSmallStringWidth(text),
 					priceBaseline, Color.GRAY);
 		}
 
-		// One finished button, or one BUY button per currency.
 		if (maxed || ended) {
 			Rectangle button = buyRow();
 			String label = ended ? "SOLD OUT"
 					: item.isRepeatable() ? "MAX LEVEL" : "OWNED";
 			this.drawManager.drawBox(button.x, button.y, button.width,
 					button.height, Color.DARK_GRAY);
-			drawCentered(label, centerX, button.y + 15, Color.DARK_GRAY);
+			drawCentered(label, area.x + area.width / 2,
+					button.y + 21, Color.DARK_GRAY);
 			return;
 		}
 		for (Currency currency : Currency.values()) {
@@ -725,14 +760,14 @@ public class ShopScreen extends Screen {
 				this.drawManager.fillBox(button.x, button.y, button.width,
 						button.height, tint(this.tab.color));
 			this.drawManager.drawBox(button.x, button.y, button.width,
-					button.height, color);
+						button.height, color);
 			String label = "BUY " + price;
 			int labelWidth = 12 + this.drawManager.getSmallStringWidth(label);
 			int left = button.x + (button.width - labelWidth) / 2;
-			this.drawManager.drawCurrencyIcon(left, button.y + 15,
-					currency == Currency.DIAMONDS, 8);
-			this.drawManager.drawSmallString(label, left + 12, button.y + 15,
-					affordable ? color : TOO_EXPENSIVE);
+			this.drawManager.drawCurrencyIcon(left, button.y + 21,
+						currency == Currency.DIAMONDS, 8);
+			this.drawManager.drawSmallString(label, left + 12, button.y + 21,
+						affordable ? color : TOO_EXPENSIVE);
 		}
 	}
 
@@ -780,9 +815,9 @@ public class ShopScreen extends Screen {
 		String name = "Comet Trail";
 		this.drawManager.drawRegularString(name, centerX
 				- this.drawManager.getRegularStringWidth(name) / 2,
-				area.y + 22, Tab.EFFECTS.color);
-		drawCometTrailPreview(centerX, area.y + 36);
-		int y = area.y + 94;
+				area.y + 28, Tab.EFFECTS.color);
+		drawCometTrailPreview(centerX, area.y + 92);
+		int y = area.y + 180;
 		drawCentered("BULLET EFFECT", centerX, y, Color.GRAY);
 		y += this.drawManager.getSmallLineHeight() + 4;
 		drawCentered("COMING SOON", centerX, y, Color.WHITE);
@@ -811,7 +846,7 @@ public class ShopScreen extends Screen {
 		// Ship in the selected skin colour.
 		SpriteType shipSprite = selectedShipSprite();
 		int[] size = this.drawManager.getSpriteSize(shipSprite);
-		int shipY = top + 26;
+		int shipY = top + 34;
 		this.drawManager.drawSpriteScaled(shipSprite,
 				centerX - size[0] * pixel / 2, shipY, pixel,
 				purchases.getSelectedSkin().colorAt(now));
@@ -862,7 +897,7 @@ public class ShopScreen extends Screen {
 		Color bolt = LIGHTNING_COLORS[(int) (now / 1200 % 3)];
 		float k = (now % 1200) / 1200f;
 		int enemyY = top + 4;
-		int shipY = top + 30;
+		int shipY = top + 38;
 
 		// Ship in the selected skin colour.
 		SpriteType shipSprite = selectedShipSprite();
@@ -977,7 +1012,7 @@ public class ShopScreen extends Screen {
 	private void drawPreview(final ShopItem item, final int centerX,
 							 final int top) {
 		PurchaseManager purchases = PurchaseManager.getInstance();
-		final int pixel = 3;
+		final int pixel = 5;
 		switch (item.getCategory()) {
 			case SHAPE: {
 				// A ship look: its shape, in the colour skin currently used.
@@ -1017,14 +1052,14 @@ public class ShopScreen extends Screen {
 				break;
 			default: {
 				Color color = itemColor(item);
-				int badge = 30;
+				int badge = 48;
 				int left = centerX - badge / 2;
 				this.drawManager.fillBox(left, top, badge, badge, tint(color));
 				this.drawManager.drawBox(left, top, badge, badge, color);
 				String letter = item.getName().substring(0, 1);
 				this.drawManager.drawRegularString(letter, centerX
 								- this.drawManager.getRegularStringWidth(letter) / 2,
-						top + 21, color);
+						top + 32, color);
 				break;
 			}
 		}

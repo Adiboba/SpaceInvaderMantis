@@ -849,9 +849,15 @@ public class ShipSelectScreen extends Screen {
 
 	private void drawStat(final String label, final double ratio,
 						  final String value, final int baseline) {
-		int barLeft = MARGIN + 120;
-		int barWidth = this.width - MARGIN * 2 - 120 - 40;
-		drawManager.drawSmallString(label, MARGIN + 4, baseline, Color.GRAY);
+		int labelX = MARGIN + 4;
+		// Size the label column from the actual text, so long labels such
+		// as "SHOTS PER SEC" never run underneath the progress bar.
+		int labelWidth = drawManager.getSmallStringWidth(label);
+		int barLeft = labelX + labelWidth + 12;
+		int valueX = this.width - MARGIN - 40;
+		int barWidth = Math.max(40, valueX - 8 - barLeft);
+
+		drawManager.drawSmallString(label, labelX, baseline, Color.GRAY);
 		drawManager.drawBox(barLeft, baseline - 8, barWidth, 8, BORDER);
 		drawManager.fillBox(barLeft + 1, baseline - 7,
 				(int) Math.round((barWidth - 1) * Math.min(1, ratio)), 7,

@@ -9,7 +9,7 @@ public class Achievement {
 
 	/** Events that can unlock an achievement. */
 	public enum Requirement {
-		ENEMY_KILLS, LEVEL10_ALL_SHIPS, FLAWLESS_LEVELS, ACCURACY, RUNCOINS, ITEM_USES
+		ENEMY_KILLS, LEVEL10_ALL_SHIPS, FLAWLESS_LEVELS, ACCURACY, RUNCOINS, ITEM_USES, LEVEL_CHALLENGE
 	}
 	private final Requirement requirement;
 
